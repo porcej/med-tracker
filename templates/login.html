@@ -11,7 +11,7 @@
   <h2>Med Tracking Sign In</h2>
   <div class="row">
     <div class="col-md-4">
-      <form action="" method="post" novalidate="" class="login-form">
+      <form action="{{ url_for('login') }}" method="post" novalidate="" class="login-form">
         <p>
           <label for="username">Aid Station</label><br>
           <select name="username" id="aid-station-select">
@@ -27,6 +27,27 @@
         </p>
         <p><button type="submit" name="submit" value="Sign In">Sign In</button></p>
       </form>
+      {% with errors = get_flashed_messages(category_filter=["error"]) %}
+        {% if errors %}
+        <div class="alert-message block-message error">
+          <ul>
+            {%- for msg in errors %}
+            <li>{{ msg }}</li>
+            {% endfor -%}
+          </ul>
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% with successes = get_flashed_messages(category_filter=["success"]) %}
+        {% if successes %}
+        <div class="success-message block-message error">
+            {%- for msg in successes %}
+                {{ msg }}
+                <br>
+            {% endfor -%}
+        </div>
+        {% endif %}
+        {% endwith %}
     </div>
   </div>
 </div>

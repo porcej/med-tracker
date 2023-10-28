@@ -13,6 +13,7 @@ __version__ = "0.0.1"
 __copyright__ = "Copyright (c) 2023 Joseph Porcelli"
 __license__ = "MIT"
 
+from pprint import pprint
 import datetime
 import os
 import re
@@ -34,22 +35,24 @@ login_manager.login_view  = 'login'
 login_manager.init_app(app)
 
 # Setup some user stuff here
-class FakeUser(UserMixin):
-    id = 1
-    username = "Admin User"
-    password = ""
+class User(UserMixin):
+    pass
 
 @login_manager.user_loader
 def load_user(id):
-    fakeuser = FakeUser()
-    return fakeuser
+    if int(id) <= len(app.config['AID_STATIONS']):
+        user = User()
+        user.id = id;
+        user.username = app.config['AID_STATIONS'][int(id)]
+    return user
 
 
 # *====================================================================*
 #         APP CONFIG
 # *====================================================================*
-app.config['PASSWORD'] = "mcm2023"
+app.config['PASSWORD'] = ""
 app.config['DATABASE'] = 'db/data.db'
+app.config['CENSUS_TEMPALTE'] = 'static/Medical Census Roster Sheet_22OCT2023.xlsx'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
     "Aid Station 2", 
@@ -64,7 +67,8 @@ app.config['AID_STATIONS'] = [
     "Med Bravo", 
     "Med Charlie", 
     "Med Delta", 
-    "Med Echo"
+    "Med Echo",
+    "Med Tracking"
 ]
 app.config['AID_STATION_MAP'] = {
     "AS1": "Aid Station 1", 
@@ -118,6 +122,45 @@ def create_database():
     conn.commit()
     conn.close()
 
+
+# Function to export data as a zipped dict
+def zip_data(cursor, id=None, aid_station=None):
+    where_clause = ""
+    if id is not None or aid_station is not None:
+        where_clause = " WHERE"
+        if id is not None:
+            where_clause = f"{where_clause} ID={id}"
+        if aid_station is not None:
+            where_clause = f"{where_clause} aid_station='{aid_station}'"
+
+    cursor.execute(f"SELECT * FROM encounters {where_clause}")
+    rows = cursor.fetchall()
+
+    # Get the column names
+    cursor.execute(f"PRAGMA table_info(encounters)")
+    columns = [column[1] for column in cursor.fetchall()]
+
+    # Convert the data to a list of dictionaries
+    data_list = []
+    for row in rows:
+        data_dict = dict(zip(columns, row))
+        data_list.append(data_dict)
+
+    return {'data': data_list}
+
+
+
+# Function to fetch a sqlite table as a JSON string
+def load_data(table_name, id=None):
+    # Connect to the SQLite database
+    conn = db_connect()
+    cursor = conn.cursor()
+    data = zip_data(cursor, table_name, id)
+    conn.close()
+    return data
+
+
+
 # *====================================================================*
 #         ROUTES
 # *====================================================================*
@@ -128,23 +171,21 @@ def create_database():
 # *--------------------------------------------------------------------*
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # if current_user.is_authenticated:
-    #     return redirect(url_for('upload_fiel'))
+    if current_user.is_authenticated:
+        print("Current user is at login page but is authenticated", file=sys.stderr)
+        return redirect(url_for('dashboard'))
 
     # If a post request was made, find the user by 
     # filtering for the username
     if request.method == "POST":
-        if app.config['USERNAME'] == request.form.get("username"):
+        if request.form.get("username") in app.config['AID_STATIONS']:
             if app.config['PASSWORD'] == request.form.get("password"):
-                user = FakeUser()
-                user.username = app.config['USERNAME'] 
-                user.password = app.config['PASSWORD']
-                # user.user_id = 1;
+                user = User()
+                user.username = request.form.get("username")
+                user.id = app.config['AID_STATIONS'].index(user.username);
                 login_user(user, remember='y')
-                next_page = request.args.get('next')
-                # if not next_page or urlsplit(next_page).netloc != '':
-                    # next_page = url_for('upload_file')
-                return redirect(next_page)
+                return redirect(url_for('dashboard'))
+        flash('Invalid username or password', 'error')
         # Redirect the user back to the home
         # (we'll create the home route in a moment)
     return render_template("login.html", aid_stations=app.config['AID_STATIONS'])
@@ -154,7 +195,180 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# *--------------------------------------------------------------------*
+#         End User Routes (Web Pages)
+# *--------------------------------------------------------------------*
+@app.route('/')
+@login_required
+def dashboard():
+    conn = db_connect()
+    cursor = conn.cursor()
 
+    active_encounters_by_station = {}
+    synopsis = {'total': {}, 'stations': {}}
+
+    for aid_station in app.config['AID_STATIONS']:
+        cursor.execute('''SELECT * FROM encounters
+                          WHERE time_in IS NOT NULL
+                          AND ( time_out IS NULL OR time_out="")
+                          AND aid_station=?
+                          ORDER BY time_in
+                       ''', (aid_station,))
+        active_encounters = cursor.fetchall()
+        active_encounters_by_station[aid_station] = cursor.fetchall()
+
+
+        # Generate Synopsis data set
+        synopsis['stations'][aid_station] = {}
+
+        # All Encounters
+        cursor.execute("SELECT COUNT(*) FROM encounters WHERE aid_station=?", (aid_station,))
+        synopsis['stations'][aid_station]['encounters'] = cursor.fetchone()[0]
+
+        # Active Encounters (have a start time and not an end time)
+        cursor.execute('''SELECT COUNT(*) FROM encounters
+                          WHERE time_in IS NOT NULL
+                          AND ( time_out IS NULL OR time_out="")
+                          AND aid_station=?
+                          ORDER BY time_in
+                       ''', (aid_station,))
+        synopsis['stations'][aid_station]['active'] = cursor.fetchone()[0]
+
+        # Closed Encounters Only (have an end time)
+        cursor.execute('''SELECT COUNT(*) FROM encounters
+                          WHERE time_out IS NOT NULL
+                          AND time_out<>""
+                          AND aid_station=?
+                          ORDER BY time_in
+                       ''', (aid_station,))
+        synopsis['stations'][aid_station]['discharged'] = cursor.fetchone()[0]
+
+        
+                # Closed Encounters Only (have an end time)
+        cursor.execute('''SELECT COUNT(*) FROM encounters
+                          WHERE hospital IS NOT NULL
+                          AND hospital<>""
+                          AND aid_station=?
+                          ORDER BY time_in
+                       ''', (aid_station,))
+        synopsis['stations'][aid_station]['transported'] = cursor.fetchone()[0]
+
+    return render_template("dashboard.html", \
+                           aid_stations=app.config['AID_STATIONS'], \
+                           active_encounters=active_encounters_by_station, \
+                           synopsis=synopsis)
+
+
+@app.route('/encounters')
+@login_required
+def encounters():
+    return render_template('encounters.html')
+
+
+# *====================================================================*
+#         API
+# *====================================================================*
+@app.route('/api/encounters', methods=['GET', 'POST'])
+@app.route('/api/encounters/<aid_station>', methods=['GET', 'POST'])
+@login_required
+def api_encounters(aid_station=None):
+    if aid_station is not None:
+        aid_station = aid_station.replace("_", " ")
+        aid_station = aid_station.replace("--", "/")
+
+    if request.method == 'POST':
+        
+        # Validate the post request
+        if 'action' not in request.form:
+            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
+
+        action = request.form['action']
+
+        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+        data = {}
+        id = 0
+        query = ""
+
+        for key in request.form.keys():
+            print(f"Key: {key}", file=sys.stderr)
+            matches = re.search(pattern, key)
+            if matches:
+                id = int(matches.group(1))
+                field_key = matches.group(2)
+                data[field_key] = request.form[key]
+
+        # Handle Editing an existing record
+        if action.lower() == 'edit':
+
+            set_elem = []
+            for col in data.keys():
+                set_elem.append(f" {col}='{data[col]}'")
+
+            query = f"UPDATE encounters SET {', '.join(set_elem)} WHERE ID={id}"
+
+            print(f"Query: {query}", file=sys.stderr)
+
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=id)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+        # Handle Creating a new record
+        if action.lower() == 'create':
+            col_elem = data.keys()
+            val_elem = []
+            for col in col_elem:
+                val_elem.append(f"'{data[col]}'")
+
+            query = f"INSERT INTO encounters ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=cursor.lastrowid)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+
+        # Handle Remove
+        if action.lower() == 'remove':
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(f"DELETE FROM encounters WHERE id={id}")
+            conn.commit()
+            
+            new_data = zip_data(cursor)
+            conn.close()
+            return jsonify(new_data)
+
+    # Handle Get Request
+    if request.method == "GET":
+        if aid_station is None:
+            conn = db_connect()
+            cursor = conn.cursor()
+            data = zip_data(cursor)
+            conn.close()
+            return jsonify(data)
+        
+        conn = db_connect()
+        cursor = conn.cursor()
+        data = zip_data(cursor, aid_station=aid_station)
+        conn.close()
+        return jsonify(data)
+
+
+    return jsonify("This fun thing")
+
+
+
+# *====================================================================*
+#         Utilities
+# *====================================================================*
+def parse_time(str):
+    return int(str.replace(":",""))
 
 
 
