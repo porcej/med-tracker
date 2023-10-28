@@ -3,6 +3,7 @@
 
 ### APP SPECIFIC ###
 db/
+census/
 
 ### Flask ###
 instance/*

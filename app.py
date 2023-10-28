@@ -52,6 +52,7 @@ def load_user(id):
 # *====================================================================*
 app.config['PASSWORD'] = ""
 app.config['DATABASE'] = 'db/data.db'
+appd.config['CENSUS_PATH'] = 'census'
 app.config['CENSUS_TEMPALTE'] = 'static/Medical Census Roster Sheet_22OCT2023.xlsx'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
@@ -95,6 +96,8 @@ app.config['AID_STATION_MAP'] = {
 if not os.path.exists('db'):
     os.makedirs('db')
 
+if not os.path.exists(appd.config['CENSUS_PATH']):
+    os.makedirs(appd.config['CENSUS_PATH'])
 
 # Function to connect to SQLLite Database
 def db_connect():
