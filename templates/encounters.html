@@ -49,7 +49,7 @@
 <body>
 <div class="content">
   <div class="nav">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> | <span>Encounters</span> | <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> | <span>Encounters</span> | <a href="{{ url_for('census_list') }}">Census Reports</a> | <a href="{{ url_for('logout') }}">Logout</a>
   </div>
   <div class="aid-station-encounters">
     <h1>{{ current_user.username }} Encounters</h1>
@@ -70,7 +70,7 @@
     </table>
   </div>
   <h1>Download Census Report</h1>
-  <form method="GET" target="_blank" class="form-inline">
+  <form method="GET" action="{{ url_for('generate_census_report') }}" target="_blank" class="form-inline" download>
     <label for="report_start_time">Start Time (HHmm):</label>
     <input type="text" name="report_start_time" id="report_start_time">
     <label for="report_end_time">End Time (HHmm):</label>

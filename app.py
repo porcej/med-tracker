@@ -52,7 +52,7 @@ def load_user(id):
 # *====================================================================*
 app.config['PASSWORD'] = ""
 app.config['DATABASE'] = 'db/data.db'
-appd.config['CENSUS_PATH'] = 'census'
+app.config['CENSUS_PATH'] = 'census'
 app.config['CENSUS_TEMPALTE'] = 'static/Medical Census Roster Sheet_22OCT2023.xlsx'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
@@ -72,20 +72,20 @@ app.config['AID_STATIONS'] = [
     "Med Tracking"
 ]
 app.config['AID_STATION_MAP'] = {
-    "AS1": "Aid Station 1", 
-    "AS2": "Aid Station 2", 
-    "AS3": "Aid Station 3", 
-    "AS46": "Aid Station 4/6", 
-    "AS5": "Aid Station 5", 
-    "AS7": "Aid Station 7", 
-    "AS8": "Aid Station 8", 
-    "AS9": "Aid Station 9", 
-    "AS10": "Aid Station 10", 
-    "mA": "Med Alpha", 
-    "mB": "Med Bravo", 
-    "mC": "Med Charlie", 
-    "mD": "Med Delta", 
-    "mE": "Med Echo"
+    "Aid Station 1": "AS1", 
+    "Aid Station 2": "AS2", 
+    "Aid Station 3": "AS3", 
+    "Aid Station 4/6": "AS46", 
+    "Aid Station 5": "AS5", 
+    "Aid Station 7": "AS7", 
+    "Aid Station 8": "AS8", 
+    "Aid Station 9": "AS9", 
+    "Aid Station 10": "AS10", 
+    "Med Alpha": "A", 
+    "Med Bravo": "B", 
+    "Med Charlie": "C", 
+    "Med Delta": "D", 
+    "Med Echo": "E"
 }
 
 
@@ -96,8 +96,8 @@ app.config['AID_STATION_MAP'] = {
 if not os.path.exists('db'):
     os.makedirs('db')
 
-if not os.path.exists(appd.config['CENSUS_PATH']):
-    os.makedirs(appd.config['CENSUS_PATH'])
+if not os.path.exists(app.config['CENSUS_PATH']):
+    os.makedirs(app.config['CENSUS_PATH'])
 
 # Function to connect to SQLLite Database
 def db_connect():
@@ -268,6 +268,71 @@ def encounters():
     return render_template('encounters.html')
 
 
+@app.route('/census')
+@login_required
+def census_list():
+    files = [f for f in os.listdir(app.config['CENSUS_PATH']) if f.lower().endswith('.xlsx')]
+    sorted_files = sorted(files, reverse=True)
+
+    return render_template('census_list.html', files=sorted_files)
+
+
+@app.route('/download/<file_name>')
+@login_required
+def download_file(file_name):
+    file_path = os.path.join(app.config['CENSUS_PATH'], file_name)
+    if os.path.isfile(file_path):
+        return send_file(file_path, as_attachment=True)
+    else:
+        abort(404)
+
+
+@app.route('/gen-census')
+@login_required
+def generate_census_report():
+    start_time = 0
+    end_time = 0
+    aid_station = current_user.username
+    try:
+        start_time = int(request.args.get('report_start_time'))
+        end_time = int(request.args.get('report_end_time'))
+    except:
+        abort(418, 'This server is a teapot, not a coffee machine. - Please provide a start and end time for the census and try again.')
+
+    if end_time < start_time:
+        abort(418, 'This server is a teapot, not a coffee machine. - Start time should be before the end time.')
+
+    # Connect to the db
+    conn = db_connect()
+    cursor = conn.cursor()
+    # Get the aid station data
+    cursor.execute(f"SELECT bib, time_in, time_out, hospital FROM encounters WHERE aid_station='{aid_station}'")
+    aid_station_data = cursor.fetchall()
+    conn.close()
+
+    current_encounters = []
+    past_encounters = []
+    transported_encounters = []
+    for row in aid_station_data:
+        time_in =  parse_time(row[1])
+        time_out = parse_time(row[2])
+        hospital = row[3]
+        if start_time <= time_out<= end_time:
+            past_encounters.append(row[0])
+            if hospital is not None and hospital != "":
+                transported_encounters.append(row[0])
+        else:
+            if start_time <= time_in <= end_time:
+                current_encounters.append(row[0])
+
+
+    filename = fill_census_report(str(start_time), aid_station, current_encounters, past_encounters, transported_encounters)
+
+
+    return redirect(url_for('download_file', file_name=filename))
+
+
+
 # *====================================================================*
 #         API
 # *====================================================================*
@@ -363,16 +428,61 @@ def api_encounters(aid_station=None):
         return jsonify(data)
 
 
-    return jsonify("This fun thing")
-
+    return jsonify("Oh no, you should never be here...")
 
 
 # *====================================================================*
 #         Utilities
 # *====================================================================*
+# Parses a time string in the format HH:mm and returns a number rep
 def parse_time(str):
-    return int(str.replace(":",""))
+    try:
+        return int(str.replace(":",""))
+    except:
+        return -1
 
+# Fills out a a census report
+def fill_census_report(start_time, aid_station, current_encounters, past_encounters, transport_encounters):
+    start_time = "{:0>4}".format(start_time)
+    filename = f"{start_time}{app.config['AID_STATION_MAP'][aid_station]}.xlsx"
+    file_path = os.path.join(app.config['CENSUS_PATH'], filename)
+
+    current_encounter_cells = [f"A{x}" for x in range(7, 16)] + \
+                              [f"B{x}" for x in range(7, 16)] + \
+                              [f"A{x}" for x in range(48, 57)] + \
+                              [f"B{x}" for x in range(48, 57)]
+
+    closed_encounter_cells = [f"A{x}" for x in range(19, 28)] + \
+                             [f"B{x}" for x in range(19, 28)] + \
+                             [f"A{x}" for x in range(60, 69)] + \
+                             [f"B{x}" for x in range(60, 69)]
+
+    transport_encounter_cells = [f"A{x}" for x in range(31, 35)] + \
+                                [f"B{x}" for x in range(31, 35)] + \
+                                [f"A{x}" for x in range(72, 76)] + \
+                                [f"B{x}" for x in range(72, 76)]
+
+    wb = load_workbook(app.config['CENSUS_TEMPALTE'])
+    wb.save(file_path)
+
+    sheet = wb["Census Roster Sheet"] # wb.active
+
+    # Write current encounters
+    for encounter in current_encounters:
+        sheet[current_encounter_cells.pop(0)] = encounter
+    wb.save(file_path)
+
+    # Write closed encounters
+    for encounter in past_encounters:
+        sheet[closed_encounter_cells.pop(0)] = encounter
+    wb.save(file_path)
+
+    # Write transport
+    for encounter in transport_encounters:
+        sheet[transport_encounter_cells.pop(0)] = encounter
+    wb.save(file_path)
+
+    return filename
 
 
 if __name__ == '__main__':
