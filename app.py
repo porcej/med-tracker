@@ -2,7 +2,7 @@
 # -*- coding: ascii -*-
 
 """
-Some models to store data
+App to track runners in aid stations for the MCM
 
 Changelog:
     - 2023-10-28 - Initial Commit
@@ -326,7 +326,7 @@ def generate_census_report():
                 current_encounters.append(row[0])
 
 
-    filename = fill_census_report(str(start_time), aid_station, current_encounters, past_encounters, transported_encounters)
+    filename = fill_census_report(str(end_time), aid_station, current_encounters, past_encounters, transported_encounters)
 
 
     return redirect(url_for('download_file', file_name=filename))
@@ -442,9 +442,9 @@ def parse_time(str):
         return -1
 
 # Fills out a a census report
-def fill_census_report(start_time, aid_station, current_encounters, past_encounters, transport_encounters):
-    start_time = "{:0>4}".format(start_time)
-    filename = f"{start_time}{app.config['AID_STATION_MAP'][aid_station]}.xlsx"
+def fill_census_report(end_time, aid_station, current_encounters, past_encounters, transport_encounters):
+    end_time = "{:0>4}".format(end_time)
+    filename = f"{end_time}{app.config['AID_STATION_MAP'][aid_station]}.xlsx"
     file_path = os.path.join(app.config['CENSUS_PATH'], filename)
 
     current_encounter_cells = [f"A{x}" for x in range(7, 16)] + \
@@ -466,6 +466,9 @@ def fill_census_report(start_time, aid_station, current_encounters, past_encount
     wb.save(file_path)
 
     sheet = wb["Census Roster Sheet"] # wb.active
+
+    # Write the Census Time
+    sheet['C4'] = end_time
 
     # Write current encounters
     for encounter in current_encounters:
