@@ -41,11 +41,12 @@ const editor = new DataTable.Editor({
             name: 'disposition',
             type: 'select',
             options: [
-                { label:'Released to finsh race', value: 'Released to finsh race' },
-                { label:'Released and left race', value: 'Released and left race' },
-                { label:'Took Sweeper bus', value: 'Took Sweeper bus' },
-                { label:'Transported by EMS', value: 'Transported by EMS' },
-                { label:'Self Transport to hospital', value: 'Self Transport to hospital' }
+                { label: 'In Aid Station', vale: '' },
+                { label: 'Released to finsh race', value: 'Released to finsh race' },
+                { label: 'Released and left race', value: 'Released and left race' },
+                { label: 'Took Sweeper bus', value: 'Took Sweeper bus' },
+                { label: 'Transported by EMS', value: 'Transported by EMS' },
+                { label: 'Self Transport to hospital', value: 'Self Transport to hospital' }
             ]
         },
         {
@@ -53,25 +54,26 @@ const editor = new DataTable.Editor({
             name: 'hospital',
             type: 'select',
             options: [
-                { label:'Alexandria Hospital', value: 'Alexandria Hospital' },
-                { label:'Inova Alexandria Hospital', value: 'Inova Alexandria Hospital' },
-                { label:'Inove Fairfax Hospital', value: 'Inove Fairfax Hospital' },
-                { label:'VHC Health Alrington', value: 'VHC Health Alrington' },
-                { label:'Childrens National Medical Center', value: 'Childrens National Medical Center' },
-                { label:'George Washington University Hospital', value: 'George Washington University Hospital' },
-                { label:'Hospital for Sick Children', value: 'Hospital for Sick Children' },
-                { label:'Howard University Hospital', value: 'Howard University Hospital' },
-                { label:'MedStar Georgetown University Hospital', value: 'MedStar Georgetown University Hospital' },
-                { label:'MedStar National Rehabilitation Hospital', value: 'MedStar National Rehabilitation Hospital' },
-                { label:'MedStar Washington Hospital Center', value: 'MedStar Washington Hospital Center' },
-                { label:'Psychiatric Institute of Washington', value: 'Psychiatric Institute of Washington' },
-                { label:'Sibley Memorial Hospital', value: 'Sibley Memorial Hospital' },
-                { label:'Specialty Hospital of Washington - Capitol Hill', value: 'Specialty Hospital of Washington - Capitol Hill' },
-                { label:'Specialty Hospital of Washington - Hadley', value: 'Specialty Hospital of Washington - Hadley' },
-                { label:'St. Elizabeths Hospital', value: 'St. Elizabeths Hospital' },
-                { label:'United Medical Center', value: 'United Medical Center' },
-                { label:'Washington DC Veterans Affairs Medical Center', value: 'Washington DC Veterans Affairs Medical Center' },
-                { label:'Other - add to note', value: 'Other' }
+                { label: 'Not Trasnported', value: '' },
+                { label: 'Alexandria Hospital', value: 'Alexandria Hospital' },
+                { label: 'Inova Alexandria Hospital', value: 'Inova Alexandria Hospital' },
+                { label: 'Inove Fairfax Hospital', value: 'Inove Fairfax Hospital' },
+                { label: 'VHC Health Alrington', value: 'VHC Health Alrington' },
+                { label: 'Childrens National Medical Center', value: 'Childrens National Medical Center' },
+                { label: 'George Washington University Hospital', value: 'George Washington University Hospital' },
+                { label: 'Hospital for Sick Children', value: 'Hospital for Sick Children' },
+                { label: 'Howard University Hospital', value: 'Howard University Hospital' },
+                { label: 'MedStar Georgetown University Hospital', value: 'MedStar Georgetown University Hospital' },
+                { label: 'MedStar National Rehabilitation Hospital', value: 'MedStar National Rehabilitation Hospital' },
+                { label: 'MedStar Washington Hospital Center', value: 'MedStar Washington Hospital Center' },
+                { label: 'Psychiatric Institute of Washington', value: 'Psychiatric Institute of Washington' },
+                { label: 'Sibley Memorial Hospital', value: 'Sibley Memorial Hospital' },
+                { label: 'Specialty Hospital of Washington - Capitol Hill', value: 'Specialty Hospital of Washington - Capitol Hill' },
+                { label: 'Specialty Hospital of Washington - Hadley', value: 'Specialty Hospital of Washington - Hadley' },
+                { label: 'St. Elizabeths Hospital', value: 'St. Elizabeths Hospital' },
+                { label: 'United Medical Center', value: 'United Medical Center' },
+                { label: 'Washington DC Veterans Affairs Medical Center', value: 'Washington DC Veterans Affairs Medical Center' },
+                { label: 'Other - add to note', value: 'Other' }
             ]
         },
         {
