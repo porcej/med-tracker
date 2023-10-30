@@ -1,0 +1,15 @@
+[Unit]
+Description=Med-Tracker: Tracking runners in aid stations
+After=network.target
+
+[Service]
+ExecStartPre=/bin/sleep 45
+ExecStart=/home/pi/med-tracker/start.sh
+WorkingDirectory=/home/pi/med-tracker
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
