@@ -1,0 +1,76 @@
+Marine Corps Marathon Encounter Form:
+
+Site Info:
+	Location:
+	Date:
+Demographics
+	Bib#
+	Name: (Last, First)
+	M/F:
+	Age:
+	Not a MCM Registered participant (check box)
+Encounter:
+	Time In: (24 HR)
+	Time Out: (24 HR)
+	Signature
+	Witness
+Presentation:
+	Ax	Allergic Rxn
+	Ib 	Insect/ Bee
+	Br 	Breathing Problem
+	As 	Asthma
+	FI 	Feeling Ill
+	VI 	Vision Issues
+	CD 	Chest Discomfort
+	Dh 	Dysrhythmia
+	B 	Blister
+	A 	Abrasion
+	Oy 	Onychoptosis
+	W 	Wound
+	S 	Sprain/Strain
+	C 	Contusion
+	T 	Tendonitis
+	F 	Fracture
+	Dz 	Dizziness
+	NV 	Nausea/ Vomiting
+	FW 	Fatigue/ Weakness
+	MC 	MM Cramps
+	D 	Dehydration
+	EC 	Exertional Collapse
+	Ha 	Headache
+	Dr 	Diarrhea
+	aMS Alterned MS
+	HE 	Heat Exhaustion
+	HS 	Heat Stroke
+	HN 	Hyponatremia
+	LS 	Hypoglycemia
+	EE 	Extremity Edema
+	Nb 	Numbness
+	LT 	Hypothermia
+	Other: 
+Vitals:
+	Time
+	Temp (R/O)
+	Resp
+	Pulse
+	BP
+	IV (Checkbox)
+	Drugs:
+		Na, Cl, Bun, Glu, Crea, TCO2, K
+	Treatment
+Disposition:
+	TGT	Transport to Georgetown
+	TGW	Transport to George Washington
+	THH	Transport to Howard
+	HWH	Transport to Washington Hosp Ctr
+	TFX	Transport to INOVA Fairfax
+	TAH Transport to INOVA Alexandria
+	TVH	Transport to VA Hosp Ctr
+	TOF	Transport to Other
+	RRR	Release to Resume Race
+	RAB	Released Awaiting Bus
+	RFR	Released Finished Race
+	RLC	Released LEft Course
+	RT 	Refused Trasnport
+	AMA	Left Against Medical Advice
+	OD	Other Disposition
