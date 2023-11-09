@@ -40,17 +40,17 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(id):
-    if int(id) <= len(app.config['AID_STATIONS']):
+    if int(id) <= len(app.config['USERS']):
         user = User()
         user.id = id;
-        user.username = app.config['AID_STATIONS'][int(id)]
+        user.username = app.config['USERS'][int(id)]
     return user
 
 
 # *====================================================================*
 #         APP CONFIG
 # *====================================================================*
-app.config['PASSWORD'] = ""
+app.config['PASSWORD'] = "mcm2023"
 app.config['DATABASE'] = 'db/data.db'
 app.config['CENSUS_PATH'] = 'census'
 app.config['CENSUS_TEMPALTE'] = 'static/Medical Census Roster Sheet_22OCT2023.xlsx'
@@ -68,8 +68,7 @@ app.config['AID_STATIONS'] = [
     "Med Bravo", 
     "Med Charlie", 
     "Med Delta", 
-    "Med Echo",
-    "Med Tracking"
+    "Med Echo"
 ]
 app.config['AID_STATION_MAP'] = {
     "Aid Station 1": "AS1", 
@@ -87,6 +86,8 @@ app.config['AID_STATION_MAP'] = {
     "Med Delta": "D", 
     "Med Echo": "E"
 }
+app.config['USERS'] = app.config['AID_STATIONS'][:]
+app.config['USERS'].append('Med Tracking')
 
 
 # *====================================================================*
@@ -117,9 +118,41 @@ def create_database():
                       time_in TEXT,
                       time_out TEXT,
                       disposition TEXT,
+                      presentation TEXT,
                       hospital TEXT,
-                      notes TEXT
+                      notes TEXT,
+                      runner_type TEXT,
+
+                      age INTEGER,
+                      sex TEXT,
+                      iv_access INTEGER DEFAULT 0 NOT NULL,
+                      registered INTEGER DEFAULT 1 NOT NULL
+
                    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      bib TEXT,
+                      first_name TEXT,
+                      last_name TEXT,
+                      age INTEGER,
+                      sex TEXT,
+                      runner INTEGER
+                   )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      code TEXT,
+                      description TEXT
+                   )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS disposition (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      code TEXT,
+                      description TEXT
+                   )''')
+
+
 
     print("Database created!", file=sys.stderr)
     conn.commit()
@@ -181,17 +214,17 @@ def login():
     # If a post request was made, find the user by 
     # filtering for the username
     if request.method == "POST":
-        if request.form.get("username") in app.config['AID_STATIONS']:
+        if request.form.get("username") in app.config['USERS']:
             if app.config['PASSWORD'] == request.form.get("password"):
                 user = User()
                 user.username = request.form.get("username")
-                user.id = app.config['AID_STATIONS'].index(user.username);
+                user.id = app.config['USERS'].index(user.username);
                 login_user(user, remember='y')
                 return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
         # Redirect the user back to the home
         # (we'll create the home route in a moment)
-    return render_template("login.html", aid_stations=app.config['AID_STATIONS'])
+    return render_template("login.html", aid_stations=app.config['USERS'])
 
 @app.route('/logout')
 def logout():
@@ -211,15 +244,14 @@ def dashboard():
     synopsis = {'total': {}, 'stations': {}}
 
     for aid_station in app.config['AID_STATIONS']:
+
+        # Active Encounters (have a start time and not an end time)
         cursor.execute('''SELECT * FROM encounters
-                          WHERE time_in IS NOT NULL
-                          AND ( time_out IS NULL OR time_out="")
+                          WHERE ( time_out IS NULL OR time_out="")
                           AND aid_station=?
                           ORDER BY time_in
                        ''', (aid_station,))
-        active_encounters = cursor.fetchall()
         active_encounters_by_station[aid_station] = cursor.fetchall()
-
 
         # Generate Synopsis data set
         synopsis['stations'][aid_station] = {}
@@ -246,8 +278,7 @@ def dashboard():
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['discharged'] = cursor.fetchone()[0]
 
-        
-                # Closed Encounters Only (have an end time)
+        # Closed Encounters with Transport Only
         cursor.execute('''SELECT COUNT(*) FROM encounters
                           WHERE hospital IS NOT NULL
                           AND hospital<>""
@@ -255,6 +286,38 @@ def dashboard():
                           ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['transported'] = cursor.fetchone()[0]
+
+
+    # All encounter recoreds
+    cursor.execute('''SELECT COUNT(*) FROM encounters
+                      ORDER BY time_in
+                   ''')
+    synopsis['total']['encounters'] = cursor.fetchone()[0]
+
+    # Active Encounters (have a start time and not an end time)
+    cursor.execute('''SELECT COUNT(*) FROM encounters
+                      WHERE time_in IS NOT NULL
+                      AND ( time_out IS NULL OR time_out="")
+                      ORDER BY time_in
+                   ''')
+    synopsis['total']['active'] = cursor.fetchone()[0]
+
+    # Closed Encounters Only (have an end time)
+    cursor.execute('''SELECT COUNT(*) FROM encounters
+                      WHERE time_out IS NOT NULL
+                      AND time_out<>""
+                      ORDER BY time_in
+                   ''')
+    synopsis['total']['discharged'] = cursor.fetchone()[0]
+
+    
+    # Closed Encounters with Transport Only
+    cursor.execute('''SELECT COUNT(*) FROM encounters
+                      WHERE hospital IS NOT NULL
+                      AND hospital<>""
+                      ORDER BY time_in
+                   ''')
+    synopsis['total']['transported'] = cursor.fetchone()[0]
 
     return render_template("dashboard.html", \
                            aid_stations=app.config['AID_STATIONS'], \
