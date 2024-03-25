@@ -109,6 +109,8 @@ def db_connect():
 def create_database():
     conn =  db_connect()
     cursor = conn.cursor()
+
+    # Encounters Table - Holds a list of all encounters
     cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       aid_station TEXT,
@@ -129,6 +131,21 @@ def create_database():
                       registered INTEGER DEFAULT 1 NOT NULL
 
                    )''')
+
+    # Vitals Table - Holds a List of all Vitasl
+    cursor.execute('''CREATE TABLE IF NOT EXISTS vitals (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  encounter_id INTEGER,
+                  vital_time TEXT,
+                  temp NUMBER,
+                  temp_method TEXT,
+                  respirations INTEGER,
+                  pulse INTEGER,
+                  systolic INTEGER,
+                  diastolic INTEGER,
+                  notes TEXT,
+                  FOREIGN KEY (encounter_id) REFERENCES encounters(id)
+               )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
