@@ -124,7 +124,6 @@ def create_database():
                       hospital TEXT,
                       notes TEXT,
                       runner_type TEXT,
-
                       age INTEGER,
                       sex TEXT,
                       iv_access INTEGER DEFAULT 0 NOT NULL,
@@ -134,18 +133,18 @@ def create_database():
 
     # Vitals Table - Holds a List of all Vitasl
     cursor.execute('''CREATE TABLE IF NOT EXISTS vitals (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  encounter_id INTEGER,
-                  vital_time TEXT,
-                  temp NUMBER,
-                  temp_method TEXT,
-                  respirations INTEGER,
-                  pulse INTEGER,
-                  systolic INTEGER,
-                  diastolic INTEGER,
-                  notes TEXT,
-                  FOREIGN KEY (encounter_id) REFERENCES encounters(id)
-               )''')
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      encounter_id INTEGER,
+                      vital_time TEXT,
+                      temp NUMBER,
+                      temp_method TEXT,
+                      respirations INTEGER,
+                      pulse INTEGER,
+                      systolic INTEGER,
+                      diastolic INTEGER,
+                      notes TEXT,
+                      FOREIGN KEY (encounter_id) REFERENCES encounters(id)
+                   )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
