@@ -200,6 +200,34 @@ def zip_data(cursor, id=None, aid_station=None):
 
     return {'data': data_list}
 
+# Function to export data as a zipped dict
+def zip_vitals(cursor, encounter_id=None, id=None):
+    where_clause = " WHERE"
+    if encounter_id is not None and id is not None:
+        where_clause = f"{where_clause} ENCOUNTER_ID={encounter_id} AND ID={id}"
+    elif encounter_id is None and id is None:
+        return {'data': []}
+    else:
+        if encounter_id is not None:
+            where_clause = f"{where_clause} ENCOUNTER_ID={encounter_id}"
+        if id is not None:
+            where_clause = f"{where_clause} id={id}"
+
+    cursor.execute(f"SELECT * FROM vitals {where_clause}")
+    rows = cursor.fetchall()
+
+    # Get the column names
+    cursor.execute(f"PRAGMA table_info(vitals)")
+    columns = [column[1] for column in cursor.fetchall()]
+
+    # Convert the data to a list of dictionaries
+    data_list = []
+    for row in rows:
+        data_dict = dict(zip(columns, row))
+        data_list.append(data_dict)
+
+    return {'data': data_list}
+
 
 
 # Function to fetch a sqlite table as a JSON string
@@ -508,6 +536,179 @@ def api_encounters(aid_station=None):
 
 
     return jsonify("Oh no, you should never be here...")
+
+@app.route('/api/vitals/<encounter_id>', methods=['GET', 'POST'])
+@login_required
+def api_vitals(encounter_id=None):
+    if request.method == 'POST':
+        
+        # Validate the post request
+        if 'action' not in request.form:
+            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
+
+        action = request.form['action']
+
+        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+        data = {}
+        id = 0
+        query = ""
+
+        for key in request.form.keys():
+            print(f"Key: {key}", file=sys.stderr)
+            matches = re.search(pattern, key)
+            if matches:
+                id = int(matches.group(1))
+                field_key = matches.group(2)
+                data[field_key] = request.form[key]
+
+        # Handle Editing an existing record
+        if action.lower() == 'edit':
+
+            set_elem = []
+            for col in data.keys():
+                set_elem.append(f" {col}='{data[col]}'")
+
+            query = f"UPDATE vitals SET {', '.join(set_elem)} WHERE ID={id}"
+
+            print(f"Query: {query}", file=sys.stderr)
+
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=id)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+        # Handle Creating a new record
+        if action.lower() == 'create':
+            col_elem = data.keys()
+            val_elem = []
+            for col in col_elem:
+                val_elem.append(f"'{data[col]}'")
+
+            query = f"INSERT INTO vitals ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=cursor.lastrowid)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+
+        # Handle Remove
+        if action.lower() == 'remove':
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(f"DELETE FROM vitals WHERE id={id}")
+            conn.commit()
+            
+            new_data = zip_data(cursor)
+            conn.close()
+            return jsonify(new_data)
+
+    # Handle Get Request
+    if request.method == "GET":
+        if encounter_id is None:
+            return jsonify("Please provide an encounter ID.")
+        
+        conn = db_connect()
+        cursor = conn.cursor()
+        data = zip_vitals(cursor, encounter_id=encounter_id)
+        conn.close()
+        return jsonify(data)
+
+
+    return jsonify("Oh no, you should never be here...")
+
+
+@app.route('/api/vital/<vital_id>', methods=['GET', 'POST'])
+@login_required
+def api_vital(vital_id=None):
+    if request.method == 'POST':
+        
+        # Validate the post request
+        if 'action' not in request.form:
+            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
+
+        action = request.form['action']
+
+        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+        data = {}
+        id = 0
+        query = ""
+
+        for key in request.form.keys():
+            print(f"Key: {key}", file=sys.stderr)
+            matches = re.search(pattern, key)
+            if matches:
+                id = int(matches.group(1))
+                field_key = matches.group(2)
+                data[field_key] = request.form[key]
+
+        # Handle Editing an existing record
+        if action.lower() == 'edit':
+
+            set_elem = []
+            for col in data.keys():
+                set_elem.append(f" {col}='{data[col]}'")
+
+            query = f"UPDATE vitals SET {', '.join(set_elem)} WHERE ID={id}"
+
+            print(f"Query: {query}", file=sys.stderr)
+
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=id)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+        # Handle Creating a new record
+        if action.lower() == 'create':
+            col_elem = data.keys()
+            val_elem = []
+            for col in col_elem:
+                val_elem.append(f"'{data[col]}'")
+
+            query = f"INSERT INTO vitals ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(query)
+            new_data = zip_data(cursor, id=cursor.lastrowid)
+            conn.commit()
+            conn.close()
+            return jsonify(new_data)
+
+
+        # Handle Remove
+        if action.lower() == 'remove':
+            conn = db_connect()
+            cursor = conn.cursor()
+            cursor.execute(f"DELETE FROM vitals WHERE id={id}")
+            conn.commit()
+            
+            new_data = zip_data(cursor)
+            conn.close()
+            return jsonify(new_data)
+
+    # Handle Get Request
+    if request.method == "GET":
+        if vital_id is None:
+            return jsonify("Please provide an encounter ID.")
+        
+        conn = db_connect()
+        cursor = conn.cursor()
+        data = zip_vitals(cursor, id=vital_id)
+        conn.close()
+        return jsonify(data)
+
+
+    return jsonify("Oh no, you should never be here...")
+
+
 
 
 # *====================================================================*

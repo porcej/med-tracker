@@ -142,21 +142,35 @@ const editor = new DataTable.Editor({
             type: 'select',
             options: [
                 { label: '', value: ''  },
-                { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
-                { label: 'Transport to George Washington', value: 'Transport to George Washington' },
-                { label: 'Transport to Howard', value: 'Transport to Howard' },
-                { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
-                { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
+
+                // Marine Corps Marathon Encounter
+                // { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
+                // { label: 'Transport to George Washington', value: 'Transport to George Washington' },
+                // { label: 'Transport to Howard', value: 'Transport to Howard' },
+                // { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
+                // { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
+                // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
+                // { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
+
+                // Run with the Maries Medical Encounter
+                { label: 'Transport to Mary Washington', value: 'Transport to Mary Washington' },
+                { label: 'Transport to Sentara NOVA', value: 'Transport to Sentara NOVA' },
+                { label: 'Transport to Stafford', value: 'Transport to Stafford' },
+                { label: 'Transport to Ft Belvoir', value: 'Transport to Ft Belvoir' },
+                { label: 'Transport to Naval Clinic Quantico', value: 'Transport to Naval Clinic Quantico' },
                 { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
-                { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
-                { label: 'Transport to Other', value: 'Transport to Other' },
+                { label: 'Transport to Spotsylvania Regional', value: 'Transport to Spotsylvania Regional' },
+
+                // Common Dispositions
+                { label: 'Transport to Other - Specify in notes', value: 'Transport to Other' },
                 { label: 'Release to Resume Race', value: 'Release to Resume Race' },
                 { label: 'Released Awaiting Bus', value: 'Released Awaiting Bus' },
                 { label: 'Released Finished Race', value: 'Released Finished Race' },
-                { label: 'Released LEft Course', value: 'Released LEft Course' },
+                { label: 'Released Left Course', value: 'Released Left Course' },
                 { label: 'Refused Trasnport', value: 'Refused Trasnport' },
                 { label: 'Left Against Medical Advice', value: 'Left Against Medical Advice' },
                 { label: 'Other Disposition - Specify in notes', value: 'Other Disposition' }
+
                 // { label: 'Transport to Georgetown', value: 'TGT' },
                 // { label: 'Transport to George Washington', value: 'TGW' },
                 // { label: 'Transport to Howard', value: 'THH' },
@@ -217,7 +231,7 @@ const editor = new DataTable.Editor({
     table: '#encounters-table'
 });
  
-const table = new DataTable('#encounters-table', {
+const encounters_table = new DataTable('#encounters-table', {
     ajax: './api/encounters'.concat(window.current_aid_station_path),
     buttons: [
         { extend: 'create', editor },
@@ -267,9 +281,90 @@ const table = new DataTable('#encounters-table', {
     ],
     dom: 'Bfrtip',
     select: {
-        style: 'os',
-        selector: 'td:not(:last-child)' // no row selection on last column
+        style: 'single'
+        // style: 'os',
+        // selector: 'td:not(:last-child)' // no row selection on last column
     },
-}); 
+});
+
+// const vitalsEditor = new DataTable.Editor({
+//     ajax: function(d) {
+//         var selected = encounters_table.row({selected: true });
+//         if (selected.any()) {
+//             d.site = selected.data().id
+//         }
+//     }
+
+//     '.api/vital/',
+//     fields: [
+//         {
+//             label: 'Time',
+//             name: 'vital_time'
+//         },
+//         {
+//             label: 'Temperature',
+//             name: 'temp'
+//         },
+//         {
+//             label: 'Temperature Method',
+//             name: 'temp_method',
+//             type: 'select',
+//             options: [
+//                 { label: '', value: '' },
+//                 { label: 'O', value: 'O' },
+//                 { label: 'R', value: 'R' }
+//             ]
+//         },
+//         {
+//             label: 'Respirations',
+//             name: 'respirations'
+//         },
+//         {
+//             label: 'Pulse',
+//             name: 'pulse'
+//         },
+//         {
+//             label: 'BP: Systolic',
+//             name: 'systolic'
+//         },
+//         {
+//             label: 'BP: Diastolic',
+//             name: 'diastolic'
+//         },
+//         {
+//             label: 'Notes',
+//             name: 'notes',
+//             type: 'textarea'
+//         }
+//         ]
+
+// });
+
+
+// const vitals_table = new DataTable('#vitals-table', {
+//     ajax: './api/encounters'.concat(window.current_aid_station_path),
+//     buttons: [
+//         { extend: 'create', vitalsEditor },
+//         { extend: 'edit', vitalsEditor },
+//         { extend: 'remove', vitalsEditor },
+//         { extend: 'refresh' },
+//     ],
+//     columns: [
+//         { data: 'vital_time' },
+//         { data: 'temp' },
+//         { data: 'temp_method' },
+//         { data: 'respirations', },
+//         { data: 'pulse', },
+//         { data: 'systolic', },
+//         { data: 'diastolic' },
+//         { data: 'notes' }
+//     ],
+//     dom: 'Bfrtip',
+//     select: {
+//         style: 'single'
+//         // style: 'os',
+//         // selector: 'td:not(:last-child)' // no row selection on last column
+//     },
+// }); 
 
 });
