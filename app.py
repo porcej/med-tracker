@@ -53,7 +53,7 @@ def load_user(id):
 # *====================================================================*
 #         APP CONFIG
 # *====================================================================*
-app.config['PASSWORD'] = "mcm2024HH"
+app.config['PASSWORD'] = ""
 app.config['DATABASE'] = 'db/data.db'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
