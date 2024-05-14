@@ -22,7 +22,7 @@ import pandas as pd
 import re
 import sqlite3
 import sys
-from openpyxl import load_workbook
+# from openpyxl import load_workbook
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
@@ -192,8 +192,6 @@ def zip_encounters(id=None, aid_station=None):
         if aid_station is not None:
             where_clause = f'aid_station={aid_station}'
 
-        print(f'WHERE CLAUSE ***************  {where_clause} ************')
-
     data = zip_table(table_name='encounters', where_clause=where_clause)
     return data
 
@@ -224,7 +222,6 @@ def zip_table(table_name, where_clause=None):
     with sqlite3.connect(app.config['DATABASE']) as conn:
         cursor = conn.cursor()
         select_statement = f'SELECT * FROM {table_name}{where_clause if where_clause else ""}'
-        print(f'SELECT STATMENT ===== {select_statement} ====')
         cursor.execute(select_statement)
         rows = cursor.fetchall()
         # Get the column names
