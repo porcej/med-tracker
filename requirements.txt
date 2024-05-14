@@ -3,3 +3,4 @@ openpyxl==3.1.2
 Werkzeug==3.0.1
 Flask-Login==0.6.3
 pandas==2.2.2
+xlsxwriter==3.2.0
