@@ -53,7 +53,7 @@ def load_user(id):
 # *====================================================================*
 #         APP CONFIG
 # *====================================================================*
-app.config['PASSWORD'] = "mcm2023"
+app.config['PASSWORD'] = "mcm2024HH"
 app.config['DATABASE'] = 'db/data.db'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
@@ -190,7 +190,7 @@ def zip_encounters(id=None, aid_station=None):
         if id is not None:
             where_clause = f'ID={id}'
         if aid_station is not None:
-            where_clause = f'aid_station={aid_station}'
+            where_clause = f"aid_station='{aid_station}'"
 
     data = zip_table(table_name='encounters', where_clause=where_clause)
     return data
