@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin | Med Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="{{ url_for('static', filename='vend/dt/css/jquery-ui.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='vend/DataTables/datatables.css') }}" rel="stylesheet" type="text/css">
+
+    <script src="{{ url_for('static', filename='vend/moment/moment.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/datatables/datatables.js') }}"></script>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="content">
+    <div class="nav">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
+        <a href="{{ url_for('encounters') }}">Encounters</a> | 
+        <span> Admin </span> | 
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    <div>
+        <h1>Registered Participants</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <input type="submit" value="Upload Runners (XLSX)">
+        </form>
+        <form method="POST">
+            <input type="submit" name="export-people" value="Export All Runners (XLSX)">
+        </form>
+        <form method="POST">
+            <input type="submit" name="remove-people" value="Remove All Runners">
+        </form>
+    </div>
+    <div>
+        <h1>Encounters</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <input type="submit" value="Upload">
+        </form>
+        <form method="POST">
+            <input type="submit" name="export-encounters" value="Export All Encounters (XLSX)">
+        </form>
+        <form method="POST">
+            <input type="submit" name="remove-encounters" value="Remove All Encounters">
+        </form>
+    </div>
+    <div>
+        <h1>Users</h1>
+
+    </div>
+    <div>
+        <h1>Aid Stations</h1>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/mt-users.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mt-aid-stations.js') }}"></script>
+</body>
+</html>
