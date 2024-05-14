@@ -6,11 +6,12 @@ App to track runners in aid stations for the MCM
 
 Changelog:
     - 2023-10-28 - Initial Commit
+    - 2024-05-14
 """
 
 __author__ = "Joseph Porcelli (porcej@gmail.com)"
-__version__ = "0.0.1"
-__copyright__ = "Copyright (c) 2023 Joseph Porcelli"
+__version__ = "0.0.5"
+__copyright__ = "Copyright (c) 2024 Joseph Porcelli"
 __license__ = "MIT"
 
 from pprint import pprint
@@ -70,22 +71,7 @@ app.config['AID_STATIONS'] = [
     "Med Delta", 
     "Med Echo"
 ]
-app.config['AID_STATION_MAP'] = {
-    "Aid Station 1": "AS1", 
-    "Aid Station 2": "AS2", 
-    "Aid Station 3": "AS3", 
-    "Aid Station 4/6": "AS46", 
-    "Aid Station 5": "AS5", 
-    "Aid Station 7": "AS7", 
-    "Aid Station 8": "AS8", 
-    "Aid Station 9": "AS9", 
-    "Aid Station 10": "AS10", 
-    "Med Alpha": "A", 
-    "Med Bravo": "B", 
-    "Med Charlie": "C", 
-    "Med Delta": "D", 
-    "Med Echo": "E"
-}
+
 app.config['USERS'] = app.config['AID_STATIONS'][:]
 app.config['MANAGERS'] = [
     'Med Tracking',
@@ -94,12 +80,9 @@ app.config['ADMINS'] = [
     'porcej'
 ]
 
-
 # Add admins to managers and managers to users
 app.config['MANAGERS'].extend(app.config['ADMINS'])
 app.config['USERS'].extend(app.config['MANAGERS'])
-
-
 
 # *====================================================================*
 #         INITIALIZE DB & DB access
@@ -179,6 +162,18 @@ def create_database():
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       code TEXT,
                       description TEXT
+                   )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      username TEXT NOT NULL,
+                      password TEXT NOT NULL,
+                      role TEXT
+                   )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS aid_stations (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      name TEXT NOT NULL
                    )''')
 
 
