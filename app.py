@@ -15,7 +15,9 @@ __license__ = "MIT"
 
 from pprint import pprint
 import datetime
+from io import BytesIO
 import os
+import pandas as pd
 import re
 import sqlite3
 import sys
@@ -52,8 +54,6 @@ def load_user(id):
 # *====================================================================*
 app.config['PASSWORD'] = "mcm2023"
 app.config['DATABASE'] = 'db/data.db'
-app.config['CENSUS_PATH'] = 'census'
-app.config['CENSUS_TEMPALTE'] = 'static/Medical Census Roster Sheet_22OCT2023.xlsx'
 app.config['AID_STATIONS'] = [
     "Aid Station 1", 
     "Aid Station 2", 
@@ -87,7 +87,18 @@ app.config['AID_STATION_MAP'] = {
     "Med Echo": "E"
 }
 app.config['USERS'] = app.config['AID_STATIONS'][:]
-app.config['USERS'].append('Med Tracking')
+app.config['MANAGERS'] = [
+    'Med Tracking',
+]
+app.config['ADMINS'] = [
+    'porcej'
+]
+
+
+# Add admins to managers and managers to users
+app.config['MANAGERS'].extend(app.config['ADMINS'])
+app.config['USERS'].extend(app.config['MANAGERS'])
+
 
 
 # *====================================================================*
@@ -96,9 +107,6 @@ app.config['USERS'].append('Med Tracking')
 # This should be a recursive walk for the database path... TODO
 if not os.path.exists('db'):
     os.makedirs('db')
-
-if not os.path.exists(app.config['CENSUS_PATH']):
-    os.makedirs(app.config['CENSUS_PATH'])
 
 # Function to connect to SQLLite Database
 def db_connect():
@@ -117,18 +125,26 @@ def create_database():
                       bib TEXT,
                       first_name TEXT,
                       last_name TEXT,
-                      time_in TEXT,
-                      time_out TEXT,
-                      disposition TEXT,
-                      presentation TEXT,
-                      hospital TEXT,
-                      notes TEXT,
-                      runner_type TEXT,
                       age INTEGER,
                       sex TEXT,
-                      iv_access INTEGER DEFAULT 0 NOT NULL,
+                      runner_type TEXT,
+                      time_in TEXT,
+                      time_out TEXT,
+                      presentation TEXT,
+                      vitals TEXT,
+                      iv TEXT,
+                      na TEXT,
+                      kplus TEXT,
+                      cl TEXT,
+                      tco TEXT,
+                      bun TEXT,
+                      cr TEXT,
+                      glu TEXT,
+                      treatments TEXT,
+                      disposition TEXT,
+                      hospital TEXT,
+                      notes TEXT,
                       registered INTEGER DEFAULT 1 NOT NULL
-
                    )''')
 
     # Vitals Table - Holds a List of all Vitasl
@@ -136,14 +152,11 @@ def create_database():
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       encounter_id INTEGER,
                       vital_time TEXT,
-                      temp NUMBER,
-                      temp_method TEXT,
-                      respirations INTEGER,
-                      pulse INTEGER,
-                      systolic INTEGER,
-                      diastolic INTEGER,
-                      notes TEXT,
-                      FOREIGN KEY (encounter_id) REFERENCES encounters(id)
+                      temp TEXT,
+                      resp TEXT,
+                      pulse TEXT,
+                      bp TEXT,
+                      notes TEXT
                    )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
@@ -176,70 +189,58 @@ def create_database():
 
 
 # Function to export data as a zipped dict
-def zip_data(cursor, id=None, aid_station=None):
-    where_clause = ""
+def zip_encounters(id=None, aid_station=None):
+    where_clause = None
     if id is not None or aid_station is not None:
-        where_clause = " WHERE"
         if id is not None:
-            where_clause = f"{where_clause} ID={id}"
+            where_clause = f'ID={id}'
         if aid_station is not None:
-            where_clause = f"{where_clause} aid_station='{aid_station}'"
+            where_clause = f'aid_station={aid_station}'
 
-    cursor.execute(f"SELECT * FROM encounters {where_clause}")
-    rows = cursor.fetchall()
+        print(f'WHERE CLAUSE ***************  {where_clause} ************')
 
-    # Get the column names
-    cursor.execute(f"PRAGMA table_info(encounters)")
-    columns = [column[1] for column in cursor.fetchall()]
+    data = zip_table(table_name='encounters', where_clause=where_clause)
+    return data
 
-    # Convert the data to a list of dictionaries
-    data_list = []
-    for row in rows:
-        data_dict = dict(zip(columns, row))
-        data_list.append(data_dict)
-
-    return {'data': data_list}
 
 # Function to export data as a zipped dict
-def zip_vitals(cursor, encounter_id=None, id=None):
-    where_clause = " WHERE"
+def zip_vitals(encounter_id=None, id=None):
+    where_clause = None
     if encounter_id is not None and id is not None:
-        where_clause = f"{where_clause} ENCOUNTER_ID={encounter_id} AND ID={id}"
+        where_clause = f'ENCOUNTER_ID={encounter_id} AND ID={id}'
     elif encounter_id is None and id is None:
         return {'data': []}
     else:
         if encounter_id is not None:
-            where_clause = f"{where_clause} ENCOUNTER_ID={encounter_id}"
+            where_clause = f'ENCOUNTER_ID={encounter_id}'
         if id is not None:
-            where_clause = f"{where_clause} id={id}"
+            where_clause = f'id={id}'
 
-    cursor.execute(f"SELECT * FROM vitals {where_clause}")
-    rows = cursor.fetchall()
+    data = zip_table(table_name='vitals', where_clause=where_clause)
+    return data
 
-    # Get the column names
-    cursor.execute(f"PRAGMA table_info(vitals)")
-    columns = [column[1] for column in cursor.fetchall()]
 
-    # Convert the data to a list of dictionaries
+# Function to export participant data as a zipped dict
+def zip_table(table_name, where_clause=None):
+    if where_clause is None:
+        where_clause = ""
+    else:
+        where_clause = f' WHERE {where_clause}'
+    with sqlite3.connect(app.config['DATABASE']) as conn:
+        cursor = conn.cursor()
+        select_statement = f'SELECT * FROM {table_name}{where_clause if where_clause else ""}'
+        print(f'SELECT STATMENT ===== {select_statement} ====')
+        cursor.execute(select_statement)
+        rows = cursor.fetchall()
+        # Get the column names
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [column[1] for column in cursor.fetchall()]
+        # Convert the data to a list of dictionaries
     data_list = []
     for row in rows:
         data_dict = dict(zip(columns, row))
         data_list.append(data_dict)
-
     return {'data': data_list}
-
-
-
-# Function to fetch a sqlite table as a JSON string
-def load_data(table_name, id=None):
-    # Connect to the SQLite database
-    conn = db_connect()
-    cursor = conn.cursor()
-    data = zip_data(cursor, table_name, id)
-    conn.close()
-    return data
-
-
 
 # *====================================================================*
 #         ROUTES
@@ -281,6 +282,8 @@ def logout():
 @app.route('/')
 @login_required
 def dashboard():
+    is_admin = current_user.username in app.config['ADMINS']
+
     conn = db_connect()
     cursor = conn.cursor()
 
@@ -366,83 +369,82 @@ def dashboard():
     return render_template("dashboard.html", \
                            aid_stations=app.config['AID_STATIONS'], \
                            active_encounters=active_encounters_by_station, \
-                           synopsis=synopsis)
+                           synopsis=synopsis, \
+                           is_admin=is_admin)
 
 
 @app.route('/encounters')
 @login_required
 def encounters():
-    return render_template('encounters.html')
+    is_admin = current_user.username in app.config['ADMINS']
+    is_manager = current_user.username in app.config['MANAGERS']
+    return render_template('encounters.html',
+            aid_stations=app.config['AID_STATIONS'], \
+            is_manager=is_manager, \
+            is_admin=is_admin)
 
 
-@app.route('/census')
+# *====================================================================*
+#         ADMIN
+# *====================================================================*
+# Route for uploading xlsx file and removing all rows
+@app.route('/admin', methods=['GET', 'POST'])
 @login_required
-def census_list():
-    files = [f for f in os.listdir(app.config['CENSUS_PATH']) if f.lower().endswith('.xlsx')]
-    sorted_files = sorted(files, reverse=True)
+def admin():
+    if current_user.username not in app.config['ADMINS']:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        if 'remove-people' in request.form:
+            remove_all_rows('persons')
+            return f'All removed all runners.'
+        elif 'remove-encounters' in request.form:
+            remove_all_rows('encounters')
+            return f'All removed all encounters.'
+        elif 'export-people' in request.form:
+            return export_to_xlsx('persons')
+        elif 'export-encounters' in request.form:
+            return export_to_xlsx('encounters')
+        elif 'file' in request.files:
+            file = request.files['file']
+            if file.filename.endswith('.xlsx'):
+                df = pd.read_excel(file)
+                df['runner'] = 'Runner'  # Set runner field to "Runner"
+                save_to_database(df)
+                return 'File uploaded and data loaded into database successfully!'
+            else:
+                return 'Only xlsx files are allowed!'
+    return render_template('admin.html')
 
-    return render_template('census_list.html', files=sorted_files)
+# Save DataFrame to SQLite database
+def save_to_database(df):
+    with sqlite3.connect(app.config['DATABASE']) as conn:
+        df.to_sql('persons', conn, if_exists='replace', index=False)
 
+# Remove all rows from the table
+def remove_all_rows(table):
+    with sqlite3.connect(app.config['DATABASE']) as conn:
+        conn.execute(f'DELETE FROM {table}')
 
-@app.route('/download/<file_name>')
-@login_required
-def download_file(file_name):
-    file_path = os.path.join(app.config['CENSUS_PATH'], file_name)
-    if os.path.isfile(file_path):
-        return send_file(file_path, as_attachment=True)
-    else:
-        abort(404)
-
-
-@app.route('/gen-census')
-@login_required
-def generate_census_report():
-    start_time = 0
-    end_time = 0
-    aid_station = current_user.username
-    try:
-        start_time = int(request.args.get('report_start_time'))
-        end_time = int(request.args.get('report_end_time'))
-    except:
-        abort(418, 'This server is a teapot, not a coffee machine. - Please provide a start and end time for the census and try again.')
-
-    if end_time < start_time:
-        abort(418, 'This server is a teapot, not a coffee machine. - Start time should be before the end time.')
-
-    # Connect to the db
-    conn = db_connect()
-    cursor = conn.cursor()
-    # Get the aid station data
-    cursor.execute(f"SELECT bib, time_in, time_out, hospital FROM encounters WHERE aid_station='{aid_station}'")
-    aid_station_data = cursor.fetchall()
-    conn.close()
-
-    current_encounters = []
-    past_encounters = []
-    transported_encounters = []
-    for row in aid_station_data:
-        time_in =  parse_time(row[1])
-        time_out = parse_time(row[2])
-        hospital = row[3]
-        if start_time <= time_out<= end_time:
-            past_encounters.append(row[0])
-            if hospital is not None and hospital != "":
-                transported_encounters.append(row[0])
-        else:
-            if start_time <= time_in <= end_time:
-                current_encounters.append(row[0])
-
-
-    filename = fill_census_report(str(end_time), aid_station, current_encounters, past_encounters, transported_encounters)
-
-
-    return redirect(url_for('download_file', file_name=filename))
-
-
+# Export SQLite table to xlsx file
+def export_to_xlsx(table):
+    with sqlite3.connect(app.config['DATABASE']) as conn:
+        df = pd.read_sql_query(f'SELECT * FROM {table}', conn)
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False, sheet_name=table)
+    writer.close()
+    output.seek(0)
+    return send_file(output, download_name=f'{table}.xlsx', as_attachment=True)
 
 # *====================================================================*
 #         API
 # *====================================================================*
+@app.route('/api/participants/', methods=['GET'])
+@login_required
+def api_participants():
+    data = zip_table("persons")
+    return jsonify(data)
+
 @app.route('/api/encounters', methods=['GET', 'POST'])
 @app.route('/api/encounters/<aid_station>', methods=['GET', 'POST'])
 @login_required
@@ -482,13 +484,12 @@ def api_encounters(aid_station=None):
             query = f"UPDATE encounters SET {', '.join(set_elem)} WHERE ID={id}"
 
             print(f"Query: {query}", file=sys.stderr)
-
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=id)
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(app.config['DATABASE']) as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+            
+            new_data = zip_encounters(id=id)
             return jsonify(new_data)
 
         # Handle Creating a new record
@@ -499,216 +500,31 @@ def api_encounters(aid_station=None):
                 val_elem.append(f"'{data[col]}'")
 
             query = f"INSERT INTO encounters ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=cursor.lastrowid)
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(app.config['DATABASE']) as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                id = cursor.lastrowid
+                conn.commit()
+            new_data = zip_encounters(id=id)
             return jsonify(new_data)
-
 
         # Handle Remove
         if action.lower() == 'remove':
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM encounters WHERE id={id}")
-            conn.commit()
+            with sqlite3.connect(app.config['DATABASE']) as conn:
+                cursor = conn.cursor()
+                cursor.execute(f"DELETE FROM encounters WHERE id={id}")
+                conn.commit()
             
-            new_data = zip_data(cursor)
-            conn.close()
+            new_data = zip_encounters(id=id)
             return jsonify(new_data)
 
     # Handle Get Request
     if request.method == "GET":
-        if aid_station is None:
-            conn = db_connect()
-            cursor = conn.cursor()
-            data = zip_data(cursor)
-            conn.close()
-            return jsonify(data)
-        
-        conn = db_connect()
-        cursor = conn.cursor()
-        data = zip_data(cursor, aid_station=aid_station)
-        conn.close()
+        with sqlite3.connect(app.config['DATABASE']) as conn:
+            data = zip_encounters(aid_station=aid_station)
         return jsonify(data)
 
-
     return jsonify("Oh no, you should never be here...")
-
-@app.route('/api/vitals/<encounter_id>', methods=['GET', 'POST'])
-@login_required
-def api_vitals(encounter_id=None):
-    if request.method == 'POST':
-        
-        # Validate the post request
-        if 'action' not in request.form:
-            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
-
-        action = request.form['action']
-
-        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
-        data = {}
-        id = 0
-        query = ""
-
-        for key in request.form.keys():
-            print(f"Key: {key}", file=sys.stderr)
-            matches = re.search(pattern, key)
-            if matches:
-                id = int(matches.group(1))
-                field_key = matches.group(2)
-                data[field_key] = request.form[key]
-
-        # Handle Editing an existing record
-        if action.lower() == 'edit':
-
-            set_elem = []
-            for col in data.keys():
-                set_elem.append(f" {col}='{data[col]}'")
-
-            query = f"UPDATE vitals SET {', '.join(set_elem)} WHERE ID={id}"
-
-            print(f"Query: {query}", file=sys.stderr)
-
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=id)
-            conn.commit()
-            conn.close()
-            return jsonify(new_data)
-
-        # Handle Creating a new record
-        if action.lower() == 'create':
-            col_elem = data.keys()
-            val_elem = []
-            for col in col_elem:
-                val_elem.append(f"'{data[col]}'")
-
-            query = f"INSERT INTO vitals ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=cursor.lastrowid)
-            conn.commit()
-            conn.close()
-            return jsonify(new_data)
-
-
-        # Handle Remove
-        if action.lower() == 'remove':
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM vitals WHERE id={id}")
-            conn.commit()
-            
-            new_data = zip_data(cursor)
-            conn.close()
-            return jsonify(new_data)
-
-    # Handle Get Request
-    if request.method == "GET":
-        if encounter_id is None:
-            return jsonify("Please provide an encounter ID.")
-        
-        conn = db_connect()
-        cursor = conn.cursor()
-        data = zip_vitals(cursor, encounter_id=encounter_id)
-        conn.close()
-        return jsonify(data)
-
-
-    return jsonify("Oh no, you should never be here...")
-
-
-@app.route('/api/vital/<vital_id>', methods=['GET', 'POST'])
-@login_required
-def api_vital(vital_id=None):
-    if request.method == 'POST':
-        
-        # Validate the post request
-        if 'action' not in request.form:
-            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
-
-        action = request.form['action']
-
-        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
-        data = {}
-        id = 0
-        query = ""
-
-        for key in request.form.keys():
-            print(f"Key: {key}", file=sys.stderr)
-            matches = re.search(pattern, key)
-            if matches:
-                id = int(matches.group(1))
-                field_key = matches.group(2)
-                data[field_key] = request.form[key]
-
-        # Handle Editing an existing record
-        if action.lower() == 'edit':
-
-            set_elem = []
-            for col in data.keys():
-                set_elem.append(f" {col}='{data[col]}'")
-
-            query = f"UPDATE vitals SET {', '.join(set_elem)} WHERE ID={id}"
-
-            print(f"Query: {query}", file=sys.stderr)
-
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=id)
-            conn.commit()
-            conn.close()
-            return jsonify(new_data)
-
-        # Handle Creating a new record
-        if action.lower() == 'create':
-            col_elem = data.keys()
-            val_elem = []
-            for col in col_elem:
-                val_elem.append(f"'{data[col]}'")
-
-            query = f"INSERT INTO vitals ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(query)
-            new_data = zip_data(cursor, id=cursor.lastrowid)
-            conn.commit()
-            conn.close()
-            return jsonify(new_data)
-
-
-        # Handle Remove
-        if action.lower() == 'remove':
-            conn = db_connect()
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM vitals WHERE id={id}")
-            conn.commit()
-            
-            new_data = zip_data(cursor)
-            conn.close()
-            return jsonify(new_data)
-
-    # Handle Get Request
-    if request.method == "GET":
-        if vital_id is None:
-            return jsonify("Please provide an encounter ID.")
-        
-        conn = db_connect()
-        cursor = conn.cursor()
-        data = zip_vitals(cursor, id=vital_id)
-        conn.close()
-        return jsonify(data)
-
-
-    return jsonify("Oh no, you should never be here...")
-
-
 
 
 # *====================================================================*
@@ -720,53 +536,6 @@ def parse_time(str):
         return int(str.replace(":",""))
     except:
         return -1
-
-# Fills out a a census report
-def fill_census_report(end_time, aid_station, current_encounters, past_encounters, transport_encounters):
-    end_time = "{:0>4}".format(end_time)
-    filename = f"{end_time}{app.config['AID_STATION_MAP'][aid_station]}.xlsx"
-    file_path = os.path.join(app.config['CENSUS_PATH'], filename)
-
-    current_encounter_cells = [f"A{x}" for x in range(7, 16)] + \
-                              [f"B{x}" for x in range(7, 16)] + \
-                              [f"A{x}" for x in range(48, 57)] + \
-                              [f"B{x}" for x in range(48, 57)]
-
-    closed_encounter_cells = [f"A{x}" for x in range(19, 28)] + \
-                             [f"B{x}" for x in range(19, 28)] + \
-                             [f"A{x}" for x in range(60, 69)] + \
-                             [f"B{x}" for x in range(60, 69)]
-
-    transport_encounter_cells = [f"A{x}" for x in range(31, 35)] + \
-                                [f"B{x}" for x in range(31, 35)] + \
-                                [f"A{x}" for x in range(72, 76)] + \
-                                [f"B{x}" for x in range(72, 76)]
-
-    wb = load_workbook(app.config['CENSUS_TEMPALTE'])
-    wb.save(file_path)
-
-    sheet = wb["Census Roster Sheet"] # wb.active
-
-    # Write the Census Time
-    sheet['C4'] = end_time
-
-    # Write current encounters
-    for encounter in current_encounters:
-        sheet[current_encounter_cells.pop(0)] = encounter
-    wb.save(file_path)
-
-    # Write closed encounters
-    for encounter in past_encounters:
-        sheet[closed_encounter_cells.pop(0)] = encounter
-    wb.save(file_path)
-
-    # Write transport
-    for encounter in transport_encounters:
-        sheet[transport_encounter_cells.pop(0)] = encounter
-    wb.save(file_path)
-
-    return filename
-
 
 if __name__ == '__main__':
     create_database()

@@ -1,16 +1,11 @@
-$(document).ready(function () {
-$.fn.dataTable.ext.buttons.refresh = {
-    text: 'Refresh'
-  , action: function ( e, dt, node, config ) {
-      dt.clear().draw();
-      dt.ajax.reload();
-    }
-};
-
-const editor = new DataTable.Editor({
+// Main / parent / top level Editor
+let encounterTable;
+const encounterEditor = new DataTable.Editor({
     ajax: './api/encounters'.concat(window.current_aid_station_path),
+    table: '#encounters-table',
+    idSrc: 'id',
     fields: [
-        {
+         {
             label: 'Bib #',
             name: 'bib'
         },
@@ -101,40 +96,64 @@ const editor = new DataTable.Editor({
                 { label: 'Numbness', value: 'Numbness' },
                 { label: 'Hypothermia', value: 'Hypothermia' },
                 { label: 'Other - Specify in notes', value: 'Other' }
-                // { label: 'Allergic Rxn', value: 'Ax' },
-                // { label: 'Insect/ Bee', value: 'Ib' },
-                // { label: 'Breathing Problem', value: 'Br' },
-                // { label: 'Asthma', value: 'As' },
-                // { label: 'Feeling Ill', value: 'FI' },
-                // { label: 'Vision Issues', value: 'VI' },
-                // { label: 'Chest Discomfort', value: 'CD' },
-                // { label: 'Dysrhythmia', value: 'Dh' },
-                // { label: 'Blister', value: 'B' },
-                // { label: 'Abrasion', value: 'A' },
-                // { label: 'Onychoptosis', value: 'Oy' },
-                // { label: 'Wound', value: 'W' },
-                // { label: 'Sprain/Strain', value: 'S' },
-                // { label: 'Contusion', value: 'C' },
-                // { label: 'Tendonitis', value: 'T' },
-                // { label: 'Fracture', value: 'F' },
-                // { label: 'Dizziness', value: 'Dz' },
-                // { label: 'Nausea/ Vomiting', value: 'NV' },
-                // { label: 'Fatigue/ Weakness', value: 'FW' },
-                // { label: 'MM Cramps', value: 'MC' },
-                // { label: 'Dehydration', value: 'D' },
-                // { label: 'Exertional Collapse', value: 'EC' },
-                // { label: 'Headache', value: 'Ha' },
-                // { label: 'Diarrhea', value: 'Dr' },
-                // { label: 'Alterned MS', value: 'aMS' },
-                // { label: 'Heat Exhaustion', value: 'HE' },
-                // { label: 'Heat Stroke', value: 'HS' },
-                // { label: 'Hyponatremia', value: 'HN' },
-                // { label: 'Hypoglycemia', value: 'LS' },
-                // { label: 'Extremity Edema', value: 'EE' },
-                // { label: 'Numbness', value: 'Nb' },
-                // { label: 'Hypothermia', value: 'LT' },
-                // { label: 'Other:', value: 'zzz' }
             ]
+        },
+        {
+            label: 'Vitals',
+            name: 'vitals',
+            fieldInfo: 'List of Vital Signs, by time, please use [TIME TEMP RESP PULSE BP Meds, Fluids, Rx'
+        },
+        {
+            label: "IV Provided",
+            name: "iv",
+            type: 'select',
+            options: [
+                { label: 'None', value: ''  },
+                { label: 'Right Arm', value: 'Right Arm' },
+                { label: 'Left Arm', value: 'Left Arm' },
+                { label: 'Other - Specify in notes', value: 'Other' }
+            ]
+        },
+        {
+            label: 'Na+',
+            name: 'na',
+            fieldInfo: 'BMP - Sodium'
+        },
+        {
+            label: 'K+',
+            name: 'kplus',
+            fieldInfo: 'BMP - Potassium'
+        },
+        {
+            label: 'Cl-',
+            name: 'cl',
+            fieldInfo: 'BMP - Chlorine'
+        },
+        {
+            label: 'tCO2',
+            name: 'tco',
+            fieldInfo: 'BMP - Bicarbonate'
+        },
+        {
+            label: 'BUN',
+            name: 'bun',
+            fieldInfo: 'BMP - Blood Urea Nitrogen'
+        },
+        {
+            label: 'Cr',
+            name: 'cr',
+            fieldInfo: 'BMP - Creatinine'
+        },
+                {
+            label: 'Glu',
+            name: 'glu',
+            fieldInfo: 'BMP - Blood Glucose'
+        },
+        {
+            label: 'Treatments',
+            name: 'treatments',
+            type: "textarea",
+            fieldInfo: 'List treatment(s) provided, including use of ice, stretches, wound care, and physical therapy along with any other pertinent information.'
         },
         {
             label: 'Disposition',
@@ -144,13 +163,13 @@ const editor = new DataTable.Editor({
                 { label: '', value: ''  },
 
                 // Marine Corps Marathon Encounter
-                // { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
-                // { label: 'Transport to George Washington', value: 'Transport to George Washington' },
-                // { label: 'Transport to Howard', value: 'Transport to Howard' },
-                // { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
-                // { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
-                // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
-                // { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
+                { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
+                { label: 'Transport to George Washington', value: 'Transport to George Washington' },
+                { label: 'Transport to Howard', value: 'Transport to Howard' },
+                { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
+                { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
+                { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
+                { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
 
                 // Run with the Maries Medical Encounter
                 { label: 'Transport to Mary Washington', value: 'Transport to Mary Washington' },
@@ -170,105 +189,26 @@ const editor = new DataTable.Editor({
                 { label: 'Refused Trasnport', value: 'Refused Trasnport' },
                 { label: 'Left Against Medical Advice', value: 'Left Against Medical Advice' },
                 { label: 'Other Disposition - Specify in notes', value: 'Other Disposition' }
-
-                // { label: 'Transport to Georgetown', value: 'TGT' },
-                // { label: 'Transport to George Washington', value: 'TGW' },
-                // { label: 'Transport to Howard', value: 'THH' },
-                // { label: 'Transport to Washington Hosp Ctr', value: 'HWH' },
-                // { label: 'Transport to INOVA Fairfax', value: 'TFX' },
-                // { label: 'Transport to INOVA Alexandria', value: 'TAH' },
-                // { label: 'Transport to VA Hosp Ctr', value: 'TVH' },
-                // { label: 'Transport to Other', value: 'TOF' },
-                // { label: 'Release to Resume Race', value: 'RRR' },
-                // { label: 'Released Awaiting Bus', value: 'RAB' },
-                // { label: 'Released Finished Race', value: 'RFR' },
-                // { label: 'Released LEft Course', value: 'RLC' },
-                // { label: 'Refused Trasnport', value: 'RT' },
-                // { label: 'Left Against Medical Advice', value: 'AMA' },
-                // { label: 'Other Disposition', value: 'OD' }
             ]
         },
-        // {
-        //     label: 'Transport Hospital',
-        //     name: 'hospital',
-        //     type: 'select',
-        //     options: [
-        //         { label: 'Not Trasnported', value: '' },
-        //         { label: 'Alexandria Hospital', value: 'Alexandria Hospital' },
-        //         { label: 'Inova Alexandria Hospital', value: 'Inova Alexandria Hospital' },
-        //         { label: 'Inove Fairfax Hospital', value: 'Inove Fairfax Hospital' },
-        //         { label: 'VHC Health Alrington', value: 'VHC Health Alrington' },
-        //         { label: 'Childrens National Medical Center', value: 'Childrens National Medical Center' },
-        //         { label: 'George Washington University Hospital', value: 'George Washington University Hospital' },
-        //         { label: 'Hospital for Sick Children', value: 'Hospital for Sick Children' },
-        //         { label: 'Howard University Hospital', value: 'Howard University Hospital' },
-        //         { label: 'MedStar Georgetown University Hospital', value: 'MedStar Georgetown University Hospital' },
-        //         { label: 'MedStar National Rehabilitation Hospital', value: 'MedStar National Rehabilitation Hospital' },
-        //         { label: 'MedStar Washington Hospital Center', value: 'MedStar Washington Hospital Center' },
-        //         { label: 'Psychiatric Institute of Washington', value: 'Psychiatric Institute of Washington' },
-        //         { label: 'Sibley Memorial Hospital', value: 'Sibley Memorial Hospital' },
-        //         { label: 'Specialty Hospital of Washington - Capitol Hill', value: 'Specialty Hospital of Washington - Capitol Hill' },
-        //         { label: 'Specialty Hospital of Washington - Hadley', value: 'Specialty Hospital of Washington - Hadley' },
-        //         { label: 'St. Elizabeths Hospital', value: 'St. Elizabeths Hospital' },
-        //         { label: 'United Medical Center', value: 'United Medical Center' },
-        //         { label: 'Washington DC Veterans Affairs Medical Center', value: 'Washington DC Veterans Affairs Medical Center' },
-        //         { label: 'Other - add to note', value: 'Other' }
-        //     ]
-        // },
         {
             label: 'Notes',
             name: 'notes',
-            type: "textarea"
+            type: "textarea",
         },
         { 
             label: 'Aid Station',
             name: 'aid_station',
             type: 'select', 
             options: window.current_aid_station_options
-        }
-    ],
-    idSrc: 'id',
-    table: '#encounters-table'
+        }        
+    ]
 });
  
-const encounters_table = new DataTable('#encounters-table', {
+// Encounters DataTable shown in the page
+encounterTable = new DataTable('#encounters-table', {
+    idSrc: 'id',
     ajax: './api/encounters'.concat(window.current_aid_station_path),
-    buttons: [
-        { extend: 'create', editor },
-        { extend: 'edit', editor },
-        { extend: 'remove', editor },
-        { extend: 'refresh' },
-        {
-            extend: 'collection',
-            text: 'Export',
-            buttons: [
-                {
-                    extend: 'copy',
-                    exportOptions: {
-                        orthogonal: 'export'
-                    }
-                },
-                {
-                    extend: 'csv',
-                    exportOptions: {
-                        orthogonal: 'export'
-                    }
-                },
-                {
-                    extend: 'excel',
-                    exportOptions: {
-                        orthogonal: 'export'
-                    }
-                },
-                {
-                    extend: 'print',
-                    exportOptions: {
-                        orthogonal: 'export'
-                    }
-                }
-            ]
-        }
-    ],
     columns: [
         { data: 'bib' },
         { data: 'first_name' },
@@ -279,92 +219,50 @@ const encounters_table = new DataTable('#encounters-table', {
         { data: 'disposition' },
         { data: 'aid_station' }
     ],
-    dom: 'Bfrtip',
+    layout: {
+        topStart: {
+            buttons: [
+                { extend: 'create', editor: encounterEditor },
+                { extend: 'edit', editor: encounterEditor },
+                { extend: 'remove', editor: encounterEditor }
+            ]
+        }
+    },
     select: {
         style: 'single'
-        // style: 'os',
-        // selector: 'td:not(:last-child)' // no row selection on last column
-    },
+    }
 });
 
-// const vitalsEditor = new DataTable.Editor({
-//     ajax: function(d) {
-//         var selected = encounters_table.row({selected: true });
-//         if (selected.any()) {
-//             d.site = selected.data().id
-//         }
-//     }
 
-//     '.api/vital/',
-//     fields: [
-//         {
-//             label: 'Time',
-//             name: 'vital_time'
-//         },
-//         {
-//             label: 'Temperature',
-//             name: 'temp'
-//         },
-//         {
-//             label: 'Temperature Method',
-//             name: 'temp_method',
-//             type: 'select',
-//             options: [
-//                 { label: '', value: '' },
-//                 { label: 'O', value: 'O' },
-//                 { label: 'R', value: 'R' }
-//             ]
-//         },
-//         {
-//             label: 'Respirations',
-//             name: 'respirations'
-//         },
-//         {
-//             label: 'Pulse',
-//             name: 'pulse'
-//         },
-//         {
-//             label: 'BP: Systolic',
-//             name: 'systolic'
-//         },
-//         {
-//             label: 'BP: Diastolic',
-//             name: 'diastolic'
-//         },
-//         {
-//             label: 'Notes',
-//             name: 'notes',
-//             type: 'textarea'
-//         }
-//         ]
+// Encounters DataTable shown in the page
+let participantsTable = new DataTable('#participants-table', {
+    idSrc: 'id',
+    ajax: './api/participants/',
+    columns: [
+        { data: 'bib' },
+        { data: 'first_name' },
+        { data: 'last_name' },
+        { data: 'age', searchable: false, targets: 0 },
+        { data: 'sex', },
+    ],
+    select: {
+        style: 'single'
+    }
+});
 
-// });
-
-
-// const vitals_table = new DataTable('#vitals-table', {
-//     ajax: './api/encounters'.concat(window.current_aid_station_path),
-//     buttons: [
-//         { extend: 'create', vitalsEditor },
-//         { extend: 'edit', vitalsEditor },
-//         { extend: 'remove', vitalsEditor },
-//         { extend: 'refresh' },
-//     ],
-//     columns: [
-//         { data: 'vital_time' },
-//         { data: 'temp' },
-//         { data: 'temp_method' },
-//         { data: 'respirations', },
-//         { data: 'pulse', },
-//         { data: 'systolic', },
-//         { data: 'diastolic' },
-//         { data: 'notes' }
-//     ],
-//     dom: 'Bfrtip',
-//     select: {
-//         style: 'single'
-//         // style: 'os',
-//         // selector: 'td:not(:last-child)' // no row selection on last column
-//     },
-// }); 
-
+$(document).ready(function () {   
+    // let table = $('#participants-table').DataTable();
+    $('#participants-table tbody').on('click', 'tr', function () {
+        const row = participantsTable.row(this).data();
+        encounterEditor
+            .create()
+            .title(`New Encounter with ${row.last_name}, ${row.first_name}`);
+        encounterEditor.field('bib').set(row.bib)
+        encounterEditor.field('first_name').set(row.first_name)
+        encounterEditor.field('last_name').set(row.last_name)
+        encounterEditor.field('age').set(row.age)
+        encounterEditor.field('sex').set(row.sex)
+        encounterEditor.field('runner_type').set('Runer')
+        encounterEditor.open();
+    });
 });

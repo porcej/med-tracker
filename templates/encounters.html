@@ -3,53 +3,50 @@
 <head>
     <title>Encounters | Med Tracking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link href="{{ url_for('static', filename='vend/dt/css/jquery-ui.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{ url_for('static', filename='vend/dt/css/jquery.dataTables.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{ url_for('static', filename='vend/dt/css/buttons.dataTables.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{ url_for('static', filename='vend/dt/css/select.dataTables.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{ url_for('static', filename='vend/dt/css/dataTables.dateTime.min.css') }}" rel="stylesheet" type="text/css">
-    <link href="{{ url_for('static', filename='vend/dt/css/editor.dataTables.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='vend/DataTables/datatables.css') }}" rel="stylesheet" type="text/css">
+
     <script type="text/javascript">
       window.current_aid_station = "{{ current_user.username }}";
-      if (window.current_aid_station === 'Med Tracking') {
+      {% if is_manager %}
         window.current_aid_station_path = "";
         window.current_aid_station_options = [
-              { label:'Aid Station 1', value: 'Aid Station 1' },
-              { label:'Aid Station 2', value: 'Aid Station 2' },
-              { label:'Aid Station 3', value: 'Aid Station 3' },
-              { label:'Aid Station 4/6', value: 'Aid Station 4/6' },
-              { label:'Aid Station 5', value: 'Aid Station 5' },
-              { label:'Aid Station 7', value: 'Aid Station 7' },
-              { label:'Aid Station 8', value: 'Aid Station 8' },
-              { label:'Aid Station 9', value: 'Aid Station 9' },
-              { label:'Aid Station 10', value: 'Aid Station 10' },
-              { label:'Med Alpha', value: 'Med Alpha' },
-              { label:'Med Bravo', value: 'Med Bravo' },
-              { label:'Med Charlie', value: 'Med Charlie' },
-              { label:'Med Delta', value: 'Med Delta' },
-              { label:'Med Echo', value: 'Med Echo' }
-          ];
-      } else {
+          {% for aid_station in aid_stations %}
+            { label:'{{ aid_station }}', value: '{{ aid_station }}' },
+          {% endfor %}
+        ];
+      {% else %}
         window.current_aid_station_path = "/".concat(window.current_aid_station.replace(/ /g,"_").replace(/\//g,"--"));
         window.current_aid_station_options = [{ label:window.current_aid_station, value: window.current_aid_station }];
-      }
+      {% endif %}
     </script>
-    <script src="{{ url_for('static', filename='vend/dt/js/moment.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/jquery-3.7.0.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/dataTables.buttons.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/dataTables.select.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/dataTables.dateTime.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/dataTables.editor.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/buttons.html5.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/jszip.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vend/dt/js/buttons.print.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/moment/moment.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/datatables/datatables.js') }}"></script>
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
 </head>
 <body>
 <div class="content">
   <div class="nav">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> | <span>Encounters</span> | <!-- <a href="{{ url_for('census_list') }}">Census Reports</a> |--> <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
+    <span>Encounters</span> | 
+    {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> {% endif %} | 
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </div>
+  <div class="runners">
+    <h1>Registered Participants</h1>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="participants-table" width="100%">
+      <thead>
+        <tr>
+          <th>Bib # or ID</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Age</th>
+          <th>Gender</th>
+        </tr>
+      </thead>
+    </table>
   </div>
   <div class="aid-station-encounters">
     <h1>{{ current_user.username }} Encounters</h1>
@@ -68,30 +65,6 @@
       </thead>
     </table>
   </div>
-  <div class="vitals">
-    <table cellpadding="0" cellspacing="0" border="0" class="display" id="vitals-table" width="100%">
-      <thead>
-        <tr>
-          <th>Time</th>
-          <th>Temperature</th>
-          <th>Temperature Method</th>
-          <th>Respirations</th>
-          <th>Pulse</th>
-          <th>BP: Systolic</th>
-          <th>BP: Diastolic'</th>
-          <th>Notes</th>
-        </tr>
-      </thead>
-    </table>
-  </div>
-<!--   <h1>Download Census Report</h1>
-  <form method="GET" action="{{ url_for('generate_census_report') }}" target="_blank" class="form-inline" download>
-    <label for="report_start_time">Start Time (HHmm):</label>
-    <input type="text" name="report_start_time" id="report_start_time">
-    <label for="report_end_time">End Time (HHmm):</label>
-    <input type="text" name="report_end_time" id="report_end_time">
-    <button type="submit" value="Upload">Download Census Report</button>
-  </form> -->
 </div>
 <script src="{{ url_for('static', filename='js/mt-enc.js') }}"></script>
 </body>
