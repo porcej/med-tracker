@@ -20,7 +20,29 @@ class Config(object):
 
     # Admin Account
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME') or ''
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or ''
+    ADMIN_PASSWORD = os.environ.get('USER_PASSWORD') or ''
+
+     # Users 
+    USERS = {
+        'Aid Station 1': {
+            'password': '',
+            'role': 'user'
+        },
+        'Aid Station 2': {
+            'password': '',
+            'role': 'user'
+        }, 
+        'Med Tracking': {
+            'password': 'SOME_PASSWORD',
+            'role': 'manager'
+        },
+        'porcej': {
+            'password': 'xe75mnhm',
+            'role': 'admin'
+        }
+    }
+    USER_PASSWORD = os.environ.get('USER_PASSWORD') or ''
+
 
     # Threading stuff
     # Set this variable to "threading", "eventlet" or "gevent" to specify
