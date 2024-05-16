@@ -6,7 +6,7 @@ const encounterEditor = new DataTable.Editor({
     idSrc: 'id',
     fields: [
          {
-            label: 'Bib #',
+            label: 'Bib Number',
             name: 'bib'
         },
         {
@@ -29,7 +29,7 @@ const encounterEditor = new DataTable.Editor({
                 { label: '', value: '' },
                 { label: 'Male', value: 'M' },
                 { label: 'Female', value: 'F' },
-                { label: 'Other', value: 'Other' },
+                // { label: 'Other', value: 'Other' },
             ]
         },
         {
@@ -37,10 +37,11 @@ const encounterEditor = new DataTable.Editor({
             name: 'runner_type',
             type: 'select',
             options: [
-                { label: 'Runner', value: 'Runner' },
-                { label: 'Civilian', value: 'Civilian'},
-                { label: 'Volunteer', value: 'Volunteer'},
-                { label: 'Military', value: 'Military'}
+                { label: 'MCMO Registered Participant', value: 'MCMO Registered Participant' },
+                { label: 'Other', value: 'Other'}
+                // { label: 'Civilian', value: 'Civilian'},
+                // { label: 'Volunteer', value: 'Volunteer'},
+                // { label: 'Military', value: 'Military'}
             ]
         },
         {
@@ -58,60 +59,62 @@ const encounterEditor = new DataTable.Editor({
             fieldInfo: '24 hour clock (HH:mm)'
         },
         {
-            label: 'Primary Complaint',
+            // label: 'Primary Complaint',
+            label: 'Presents',
             name: 'presentation',
             type: 'select',
             options: [
                 { label: '', value: ''  },
-                { label: 'Allergic Rxn', value: 'Allergic Rxn' },
-                { label: 'Insect/ Bee', value: 'Insect/ Bee' },
-                { label: 'Breathing Problem', value: 'Breathing Problem' },
-                { label: 'Asthma', value: 'Asthma' },
-                { label: 'Feeling Ill', value: 'Feeling Ill' },
-                { label: 'Vision Issues', value: 'Vision Issues' },
-                { label: 'Chest Discomfort', value: 'Chest Discomfort' },
-                { label: 'Dysrhythmia', value: 'Dysrhythmia' },
-                { label: 'Blister', value: 'Blister' },
-                { label: 'Abrasion', value: 'Abrasion' },
-                { label: 'Onychoptosis', value: 'Onychoptosis' },
-                { label: 'Wound', value: 'Wound' },
-                { label: 'Sprain/Strain', value: 'Sprain/Strain' },
-                { label: 'Contusion', value: 'Contusion' },
-                { label: 'Tendonitis', value: 'Tendonitis' },
-                { label: 'Fracture', value: 'Fracture' },
-                { label: 'Dizziness', value: 'Dizziness' },
-                { label: 'Nausea/ Vomiting', value: 'Nausea/ Vomiting' },
-                { label: 'Fatigue/ Weakness', value: 'Fatigue/ Weakness' },
-                { label: 'MM Cramps', value: 'MM Cramps' },
-                { label: 'Dehydration', value: 'Dehydration' },
-                { label: 'Exertional Collapse', value: 'Exertional Collapse' },
-                { label: 'Headache', value: 'Headache' },
-                { label: 'Diarrhea', value: 'Diarrhea' },
-                { label: 'Alterned MS', value: 'Alterned MS' },
-                { label: 'Heat Exhaustion', value: 'Heat Exhaustion' },
-                { label: 'Heat Stroke', value: 'Heat Stroke' },
-                { label: 'Hyponatremia', value: 'Hyponatremia' },
-                { label: 'Hypoglycemia', value: 'Hypoglycemia' },
-                { label: 'Extremity Edema', value: 'Extremity Edema' },
-                { label: 'Numbness', value: 'Numbness' },
-                { label: 'Hypothermia', value: 'Hypothermia' },
+                { label: 'AX        Allergic Rxn', value: 'Allergic Rxn' },
+                { label: 'IB         Insect/ Bee', value: 'Insect/ Bee' },
+                { label: 'Br   Breathing Problem', value: 'Breathing Problem' },
+                { label: 'As              Asthma', value: 'Asthma' },
+                { label: 'Fi         Feeling Ill', value: 'Feeling Ill' },
+                { label: 'VI       Vision Issues', value: 'Vision Issues' },
+                { label: 'CD    Chest Discomfort', value: 'Chest Discomfort' },
+                { label: 'Dh         Dysrhythmia', value: 'Dysrhythmia' },
+                { label: 'B              Blister', value: 'Blister' },
+                { label: 'A             Abrasion', value: 'Abrasion' },
+                { label: 'Oy        Onychoptosis', value: 'Onychoptosis' },
+                { label: 'W                Wound', value: 'Wound' },
+                { label: 'S        Sprain/Strain', value: 'Sprain/Strain' },
+                { label: 'C            Contusion', value: 'Contusion' },
+                { label: 'T           Tendonitis', value: 'Tendonitis' },
+                { label: 'F             Fracture', value: 'Fracture' },
+                { label: 'Dz           Dizziness', value: 'Dizziness' },
+                { label: 'NV    Nausea/ Vomiting', value: 'Nausea/ Vomiting' },
+                { label: 'FW   Fatigue/ Weakness', value: 'Fatigue/ Weakness' },
+                { label: 'MC           MM Cramps', value: 'MM Cramps' },
+                { label: 'D          Dehydration', value: 'Dehydration' },
+                { label: 'EC Exertional Collapse', value: 'Exertional Collapse' },
+                { label: 'Ha            Headache', value: 'Headache' },
+                { label: 'Dr            Diarrhea', value: 'Diarrhea' },
+                { label: 'aMS        Alterned MS', value: 'Alterned MS' },
+                { label: 'HE     Heat Exhaustion', value: 'Heat Exhaustion' },
+                { label: 'HS         Heat Stroke', value: 'Heat Stroke' },
+                { label: 'HN        Hyponatremia', value: 'Hyponatremia' },
+                { label: 'LS        Hypoglycemia', value: 'Hypoglycemia' },
+                { label: 'EE     Extremity Edema', value: 'Extremity Edema' },
+                { label: 'Nb            Numbness', value: 'Numbness' },
+                { label: 'LT.        Hypothermia', value: 'Hypothermia' },
                 { label: 'Other - Specify in notes', value: 'Other' }
             ]
         },
         {
             label: 'Vitals',
             name: 'vitals',
-            fieldInfo: 'List of Vital Signs, by time, please use [TIME TEMP RESP PULSE BP Meds, Fluids, Rx'
+            fieldInfo: 'List of Vital Signs, by time, please use [TIME TEMP RESP PULSE BP Meds, Fluids, Rx',
+            type: 'textarea'
         },
         {
-            label: "IV Provided",
+            label: 'IV Provided',
             name: "iv",
             type: 'select',
             options: [
                 { label: 'None', value: ''  },
-                { label: 'Right Arm', value: 'Right Arm' },
-                { label: 'Left Arm', value: 'Left Arm' },
-                { label: 'Other - Specify in notes', value: 'Other' }
+                { label: 'Right Arm', value: 'IV - Right Arm' },
+                { label: 'Left Arm', value: 'IV - Left Arm' },
+                { label: 'Other - Specify in notes', value: 'IV - Other' }
             ]
         },
         {
