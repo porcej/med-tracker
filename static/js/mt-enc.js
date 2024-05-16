@@ -27,8 +27,8 @@ const encounterEditor = new DataTable.Editor({
             type: 'select',
             options: [
                 { label: '', value: '' },
-                { label: 'Male', value: 'Male' },
-                { label: 'Female', value: 'Female' },
+                { label: 'Male', value: 'M' },
+                { label: 'Female', value: 'F' },
                 { label: 'Other', value: 'Other' },
             ]
         },
