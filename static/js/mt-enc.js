@@ -263,6 +263,7 @@ $(document).ready(function () {
         encounterEditor.field('age').set(row.age)
         encounterEditor.field('sex').set(row.sex)
         encounterEditor.field('runner_type').set('Runer')
-        encounterEditor.open();
+        encounterEditor.buttons('Create')
+            .open();
     });
 });
