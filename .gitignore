@@ -4,6 +4,8 @@
 ### APP SPECIFIC ###
 db/
 census/
+logs/
+config.py
 
 ### Flask ###
 instance/*
