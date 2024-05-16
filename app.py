@@ -22,7 +22,6 @@ import pandas as pd
 import re
 import sqlite3
 import sys
-# from openpyxl import load_workbook
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
