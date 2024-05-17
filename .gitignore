@@ -5,7 +5,8 @@
 db/
 census/
 logs/
-config.py
+/config.py
+/*.sh
 
 ### Flask ###
 instance/*
