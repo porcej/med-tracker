@@ -114,12 +114,16 @@ def create_database():
                       last_name TEXT,
                       age INTEGER,
                       sex TEXT,
-                      runner_type TEXT,
+                      participant INTEGER,
+                      active_duty INTEGER,
                       time_in TEXT,
                       time_out TEXT,
                       presentation TEXT,
                       vitals TEXT,
                       iv TEXT,
+                      iv_fluid_count INTEGER,
+                      oral_fluid INTEGER,
+                      food INTEGER,
                       na TEXT,
                       kplus TEXT,
                       cl TEXT,
@@ -130,9 +134,7 @@ def create_database():
                       treatments TEXT,
                       disposition TEXT,
                       hospital TEXT,
-                      notes TEXT,
-                      registered INTEGER DEFAULT 1 NOT NULL,
-                      active_duty TEXT
+                      notes TEXT
                    )''')
 
     # Vitals Table - Holds a List of all Vitasl
@@ -154,8 +156,8 @@ def create_database():
                       last_name TEXT,
                       age INTEGER,
                       sex TEXT,
-                      runner TEXT,
-                      active_duty TEXT
+                      participant INTEGER,
+                      active_duty INTEGER
                    )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
@@ -404,7 +406,7 @@ def admin():
             file = request.files['participants-file']
             if file.filename.endswith('.xlsx'):
                 df = pd.read_excel(file)
-                df['runner_type'] = 'Yes'  # Set runner field to "Runner"
+                df['participant'] = 1
                 save_to_database(df, 'persons')
                 return 'File uploaded and data loaded into database successfully!'
             else:

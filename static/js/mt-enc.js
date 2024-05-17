@@ -33,16 +33,20 @@ const encounterEditor = new DataTable.Editor({
             ]
         },
         {
-            label: 'Race Partipant',
-            name: 'runner_type',
-            type: 'select',
-            options: [
-                { label: 'Yes', value: 'yes' },
-                { label: 'No', value: ''}
-                // { label: 'Civilian', value: 'Civilian'},
-                // { label: 'Volunteer', value: 'Volunteer'},
-                // { label: 'Military', value: 'Military'}
-            ]
+            label: 'Race Partipant.',
+            name: 'participant',
+            type: 'checkbox',
+            separator: '|',
+            options: [{ label: '', value: 1}],
+            fieldInfo: 'Check this box if the patient is a registered race participant.'
+        },
+        {
+            label: 'Active Duty',
+            name: 'active_duty',
+            type: 'checkbox',
+            separator: '|',
+            options: [{ label: '', value: 1}],
+            fieldInfo: 'Check this box if the patient is an active duty service member.'
         },
         {
             label: "Time into Aid Station",
@@ -116,6 +120,34 @@ const encounterEditor = new DataTable.Editor({
                 { label: 'Left Arm', value: 'IV - Left Arm' },
                 { label: 'Other - Specify in notes', value: 'IV - Other' }
             ]
+        },
+        {
+            label: 'IV Fluid Bags',
+            name: 'iv_fluid_count',
+            type: 'select',
+            options: [
+                {label: '0', value: 0},
+                {label: '1', value: 1},
+                {label: '2', value: 2},
+                {label: '3', value: 3},
+                {label: '4', value: 4},
+                {label: '5', value: 5},
+            ],
+            fieldInfo: "Please specify the number of bags of fluid administered by IV."
+        },
+        {
+            label: 'Food Provided',
+            name: 'food',
+            type: 'checkbox',
+            options: [{label: '', value: 1}],
+            fieldInfo: 'Check this box if the patient was provided with food stuffs.'
+        },
+        {
+            label: 'Oral Fluids Provided',
+            name: 'oral_fluid',
+            type: 'checkbox',
+            options: [{label: '', value: 1}],
+            fieldInfo: 'Check this box if the patient was provided with fluids by mouth.'
         },
         {
             label: 'Na+',
@@ -236,6 +268,13 @@ encounterTable = new DataTable('#encounters-table', {
     }
 });
 
+// encounterTable.on('change', 'input.editor-active_duty', function(){
+//     encounterEditor
+//         .edit(this.closest('tr'), false)
+//         .set('active_duty', this.checked ? 'Yes' : '')
+//         .submit
+// })
+
 
 // Encounters DataTable shown in the page
 let participantsTable = new DataTable('#participants-table', {
@@ -265,7 +304,7 @@ $(document).ready(function () {
         encounterEditor.field('last_name').set(row.last_name)
         encounterEditor.field('age').set(row.age)
         encounterEditor.field('sex').set(row.sex)
-        encounterEditor.field('runner_type').set('yes')
+        encounterEditor.field('participant').set(1)
         encounterEditor.buttons('Create')
             .open();
     });
