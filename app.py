@@ -133,7 +133,8 @@ def create_database():
                       disposition TEXT,
                       hospital TEXT,
                       notes TEXT,
-                      registered INTEGER DEFAULT 1 NOT NULL
+                      registered INTEGER DEFAULT 1 NOT NULL,
+                      active_duty TEXT
                    )''')
 
     # Vitals Table - Holds a List of all Vitasl
@@ -155,7 +156,8 @@ def create_database():
                       last_name TEXT,
                       age INTEGER,
                       sex TEXT,
-                      runner INTEGER
+                      runner TEXT,
+                      active_duty TEXT
                    )''')
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
