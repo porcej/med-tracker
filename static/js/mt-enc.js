@@ -33,7 +33,7 @@ const encounterEditor = new DataTable.Editor({
             ]
         },
         {
-            label: 'Race Partipant.',
+            label: 'Race Partipant',
             name: 'participant',
             type: 'checkbox',
             separator: '|',
