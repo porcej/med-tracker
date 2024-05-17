@@ -22,44 +22,37 @@ class Config(object):
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME') or ''
     ADMIN_PASSWORD = os.environ.get('USER_PASSWORD') or ''
 
-     # Users 
-    USERS = [
-        {
-            'username': 'Aid S/F'
+    # Users 
+    USER_ACCOUNTS = {
+        'Aid S/F': {
             'password': '',
             'role': 'user'
         },
-        {
-            'username': 'Aid 1',
+        'Aid 1': {
             'password': '',
             'role': 'user'
         }, 
-        {
-            'username': 'Aid 2',
+        'Aid 2': {
             'password': '',
             'role': 'user'
         }, 
-        {
-            'username': 'Aid 3',
+        'Aid 3': {
             'password': '',
             'role': 'user'
         }, 
-        {
-            'username': 'Aid 4',
+        'Aid 4': {
             'password': '',
             'role': 'user'
         },
-        {
-            'username': 'Med Tracking',
-            'password': 'SomeManagerPassword',
+        'Med Tracking': {
+            'password': 'SomeHardToGuessManagerPassword',
             'role': 'manager'
         },
-        {
-            'username': 'admin',
-            'password': 'RealHardToGuessAdminPassword',
+        'admin': {
+            'password': 'SomeHardToGuessAdminPassword',
             'role': 'admin'
         }
-    ]
+    }
     USER_PASSWORD = os.environ.get('USER_PASSWORD') or ''
 
 

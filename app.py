@@ -14,6 +14,8 @@ __version__ = "0.0.5"
 __copyright__ = "Copyright (c) 2024 Joseph Porcelli"
 __license__ = "MIT"
 
+
+from config import Config
 from pprint import pprint
 import datetime
 from io import BytesIO
@@ -30,7 +32,7 @@ from werkzeug.utils import secure_filename
 
 # Initialize the app
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Change this to a secure secret key
+app.config.from_object(Config)
 
 login_manager = LoginManager()
 login_manager.login_view  = 'login'
@@ -38,50 +40,89 @@ login_manager.init_app(app)
 
 # Setup some user stuff here
 class User(UserMixin):
-    pass
+    def __init__(self, name, id, role, active=True):
+        self.id = id
+        self.name = name
+        self.role = role
+        self.active = active
+        print(f'****\t\t\t\t {role}')
+
+    def get_id(self):
+        return self.id
+
+    @property
+    def is_active(self):
+        return self.active
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+    @property
+    def is_manager(self):
+        return self.role == 'manager'
+    
 
 @login_manager.user_loader
 def load_user(id):
-    if int(id) <= len(app.config['USERS']):
-        user = User()
-        user.id = id;
-        user.username = app.config['USERS'][int(id)]
-    return user
+    return Config.USERS[int(id)]
 
 
 # *====================================================================*
 #         APP CONFIG
 # *====================================================================*
-app.config['PASSWORD'] = ""
-app.config['DATABASE'] = 'db/data.db'
-app.config['AID_STATIONS'] = [
-    "Aid Station 1", 
-    "Aid Station 2", 
-    "Aid Station 3", 
-    "Aid Station 4/6", 
-    "Aid Station 5", 
-    "Aid Station 7", 
-    "Aid Station 8", 
-    "Aid Station 9", 
-    "Aid Station 10", 
-    "Med Alpha", 
-    "Med Bravo", 
-    "Med Charlie", 
-    "Med Delta", 
-    "Med Echo"
-]
+idx = 0
+Config.AID_STATIONS = []
+Config.USERS = []
+for n, u in Config.USER_ACCOUNTS.items():
+    print(f'*** {n}: {u}')
 
-app.config['USERS'] = app.config['AID_STATIONS'][:]
-app.config['MANAGERS'] = [
-    'Med Tracking',
-]
-app.config['ADMINS'] = [
-    'porcej'
-]
+    # Create a userid for each user
+    u['id'] = idx
 
-# Add admins to managers and managers to users
-app.config['MANAGERS'].extend(app.config['ADMINS'])
-app.config['USERS'].extend(app.config['MANAGERS'])
+    # Assume users are all aid stations
+    if (u['role'] == 'user'):
+        Config.AID_STATIONS.append(n)
+
+    # Set password if no password is provided
+    if (u['password'] is None or u['password'] == ''):
+        u['password'] = Config.USER_PASSWORD
+    Config.USERS.append(User(n, idx, u['role']))
+    idx += 1
+
+print("****************************")
+for idx, user in enumerate(Config.USERS):
+    print(f'{user.name} - {idx} - {user.id} - {user.role}')
+print("****************************")
+
+# app.config['AID_STATIONS'] = [
+#     "Aid Station 1", 
+#     "Aid Station 2", 
+#     "Aid Station 3", 
+#     "Aid Station 4/6", 
+#     "Aid Station 5", 
+#     "Aid Station 7", 
+#     "Aid Station 8", 
+#     "Aid Station 9", 
+#     "Aid Station 10", 
+#     "Med Alpha", 
+#     "Med Bravo", 
+#     "Med Charlie", 
+#     "Med Delta", 
+#     "Med Echo"
+# ]
+
+# app.config['USERS'] = app.config['AID_STATIONS'][:]
+# app.config['MANAGERS'] = [
+#     'Med Tracking',
+# ]
+# app.config['ADMINS'] = [
+#     'porcej'
+# ]
+
+# # Add admins to managers and managers to users
+# app.config['MANAGERS'].extend(app.config['ADMINS'])
+# app.config['USERS'].extend(app.config['MANAGERS'])
 
 # *====================================================================*
 #         INITIALIZE DB & DB access
@@ -92,7 +133,7 @@ if not os.path.exists('db'):
 
 # Function to connect to SQLLite Database
 def db_connect():
-    return sqlite3.connect(app.config['DATABASE'])
+    return sqlite3.connect(Config.DATABASE_PATH)
 
 
 # Function to create an SQLite database and table to store data
@@ -218,7 +259,7 @@ def zip_table(table_name, where_clause=None):
         where_clause = ""
     else:
         where_clause = f' WHERE {where_clause}'
-    with sqlite3.connect(app.config['DATABASE']) as conn:
+    with sqlite3.connect(Config.DATABASE_PATH) as conn:
         cursor = conn.cursor()
         select_statement = f'SELECT * FROM {table_name}{where_clause if where_clause else ""}'
         cursor.execute(select_statement)
@@ -247,20 +288,22 @@ def login():
         print("Current user is at login page but is authenticated", file=sys.stderr)
         return redirect(url_for('dashboard'))
 
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+
     # If a post request was made, find the user by 
     # filtering for the username
     if request.method == "POST":
-        if request.form.get("username") in app.config['USERS']:
-            if app.config['PASSWORD'] == request.form.get("password"):
-                user = User()
-                user.username = request.form.get("username")
-                user.id = app.config['USERS'].index(user.username);
+        if username in Config.USER_ACCOUNTS.keys():
+            if password == Config.USER_ACCOUNTS[username]['password']:
+                user = Config.USERS[Config.USER_ACCOUNTS[username]['id']]
                 login_user(user, remember='y')
                 return redirect(url_for('dashboard'))
         flash('Invalid username or password', 'error')
         # Redirect the user back to the home
         # (we'll create the home route in a moment)
-    return render_template("login.html", aid_stations=app.config['USERS'])
+    return render_template("login.html", aid_stations=Config.USER_ACCOUNTS.keys())
 
 @app.route('/logout')
 def logout():
@@ -273,15 +316,13 @@ def logout():
 @app.route('/')
 @login_required
 def dashboard():
-    is_admin = current_user.username in app.config['ADMINS']
-
     conn = db_connect()
     cursor = conn.cursor()
 
     active_encounters_by_station = {}
     synopsis = {'total': {}, 'stations': {}}
 
-    for aid_station in app.config['AID_STATIONS']:
+    for aid_station in Config.AID_STATIONS:
 
         # Active Encounters (have a start time and not an end time)
         cursor.execute('''SELECT * FROM encounters
@@ -358,21 +399,19 @@ def dashboard():
     synopsis['total']['transported'] = cursor.fetchone()[0]
 
     return render_template("dashboard.html", \
-                           aid_stations=app.config['AID_STATIONS'], \
+                           aid_stations=Config.AID_STATIONS, \
                            active_encounters=active_encounters_by_station, \
                            synopsis=synopsis, \
-                           is_admin=is_admin)
+                           is_admin=current_user.is_admin)
 
 
 @app.route('/encounters')
 @login_required
 def encounters():
-    is_admin = current_user.username in app.config['ADMINS']
-    is_manager = current_user.username in app.config['MANAGERS']
     return render_template('encounters.html',
-            aid_stations=app.config['AID_STATIONS'], \
-            is_manager=is_manager, \
-            is_admin=is_admin)
+            aid_stations=Config.AID_STATIONS, \
+            is_manager=current_user.is_manager, \
+            is_admin=current_user.is_admin)
 
 
 # *====================================================================*
@@ -382,7 +421,7 @@ def encounters():
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
-    if current_user.username not in app.config['ADMINS']:
+    if current_user.role :
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
         if 'remove-people' in request.form:
@@ -408,17 +447,17 @@ def admin():
 
 # Save DataFrame to SQLite database
 def save_to_database(df):
-    with sqlite3.connect(app.config['DATABASE']) as conn:
+    with sqlite3.connect(Config.DATABASE_PATH) as conn:
         df.to_sql('persons', conn, if_exists='replace', index=False)
 
 # Remove all rows from the table
 def remove_all_rows(table):
-    with sqlite3.connect(app.config['DATABASE']) as conn:
+    with sqlite3.connect(Config.DATABASE_PATH) as conn:
         conn.execute(f'DELETE FROM {table}')
 
 # Export SQLite table to xlsx file
 def export_to_xlsx(table):
-    with sqlite3.connect(app.config['DATABASE']) as conn:
+    with sqlite3.connect(Config.DATABASE_PATH) as conn:
         df = pd.read_sql_query(f'SELECT * FROM {table}', conn)
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
@@ -426,6 +465,7 @@ def export_to_xlsx(table):
     writer.close()
     output.seek(0)
     return send_file(output, download_name=f'{table}.xlsx', as_attachment=True)
+
 
 # *====================================================================*
 #         API
@@ -435,6 +475,7 @@ def export_to_xlsx(table):
 def api_participants():
     data = zip_table("persons")
     return jsonify(data)
+
 
 @app.route('/api/encounters', methods=['GET', 'POST'])
 @app.route('/api/encounters/<aid_station>', methods=['GET', 'POST'])
@@ -475,7 +516,7 @@ def api_encounters(aid_station=None):
             query = f"UPDATE encounters SET {', '.join(set_elem)} WHERE ID={id}"
 
             print(f"Query: {query}", file=sys.stderr)
-            with sqlite3.connect(app.config['DATABASE']) as conn:
+            with sqlite3.connect(Config.DATABASE_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 conn.commit()
@@ -491,7 +532,7 @@ def api_encounters(aid_station=None):
                 val_elem.append(f"'{data[col]}'")
 
             query = f"INSERT INTO encounters ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
-            with sqlite3.connect(app.config['DATABASE']) as conn:
+            with sqlite3.connect(Config.DATABASE_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 id = cursor.lastrowid
@@ -501,7 +542,7 @@ def api_encounters(aid_station=None):
 
         # Handle Remove
         if action.lower() == 'remove':
-            with sqlite3.connect(app.config['DATABASE']) as conn:
+            with sqlite3.connect(Config.DATABASE_PATH) as conn:
                 cursor = conn.cursor()
                 cursor.execute(f"DELETE FROM encounters WHERE id={id}")
                 conn.commit()
@@ -511,7 +552,7 @@ def api_encounters(aid_station=None):
 
     # Handle Get Request
     if request.method == "GET":
-        with sqlite3.connect(app.config['DATABASE']) as conn:
+        with sqlite3.connect(Config.DATABASE_PATH) as conn:
             data = zip_encounters(aid_station=aid_station)
         return jsonify(data)
 
