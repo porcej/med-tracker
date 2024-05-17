@@ -1,0 +1,22 @@
+server {
+    server_name med-tracker;
+
+    listen 443 ssl;
+
+    include snippgets/ssl-certs-med-tracker.conf;
+    include snippets/ssl-params.conf;
+    location / {
+        include proxy_params;
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+server {
+    if ($host = med-tracker) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name med-tracker;
+    return 404; # managed by Certbot
+}
