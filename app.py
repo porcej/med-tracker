@@ -90,40 +90,6 @@ for n, u in Config.USER_ACCOUNTS.items():
     Config.USERS.append(User(n, idx, u['role']))
     idx += 1
 
-print("****************************")
-for idx, user in enumerate(Config.USERS):
-    print(f'{user.name} - {idx} - {user.id} - {user.role}')
-print("****************************")
-
-# app.config['AID_STATIONS'] = [
-#     "Aid Station 1", 
-#     "Aid Station 2", 
-#     "Aid Station 3", 
-#     "Aid Station 4/6", 
-#     "Aid Station 5", 
-#     "Aid Station 7", 
-#     "Aid Station 8", 
-#     "Aid Station 9", 
-#     "Aid Station 10", 
-#     "Med Alpha", 
-#     "Med Bravo", 
-#     "Med Charlie", 
-#     "Med Delta", 
-#     "Med Echo"
-# ]
-
-# app.config['USERS'] = app.config['AID_STATIONS'][:]
-# app.config['MANAGERS'] = [
-#     'Med Tracking',
-# ]
-# app.config['ADMINS'] = [
-#     'porcej'
-# ]
-
-# # Add admins to managers and managers to users
-# app.config['MANAGERS'].extend(app.config['ADMINS'])
-# app.config['USERS'].extend(app.config['MANAGERS'])
-
 # *====================================================================*
 #         INITIALIZE DB & DB access
 # *====================================================================*
