@@ -45,7 +45,6 @@ class User(UserMixin):
         self.name = name
         self.role = role
         self.active = active
-        print(f'****\t\t\t\t {role}')
 
     def get_id(self):
         return self.id
@@ -75,7 +74,6 @@ idx = 0
 Config.AID_STATIONS = []
 Config.USERS = []
 for n, u in Config.USER_ACCOUNTS.items():
-    print(f'*** {n}: {u}')
 
     # Create a userid for each user
     u['id'] = idx
@@ -402,21 +400,32 @@ def admin():
             return export_to_xlsx('persons')
         elif 'export-encounters' in request.form:
             return export_to_xlsx('encounters')
-        elif 'file' in request.files:
-            file = request.files['file']
+        elif 'participants-file' in request.files:
+            file = request.files['participants-file']
             if file.filename.endswith('.xlsx'):
                 df = pd.read_excel(file)
-                df['runner'] = 'Runner'  # Set runner field to "Runner"
-                save_to_database(df)
+                df['runner_type'] = 'Yes'  # Set runner field to "Runner"
+                save_to_database(df, 'persons')
                 return 'File uploaded and data loaded into database successfully!'
             else:
                 return 'Only xlsx files are allowed!'
+        elif 'encounters-file' in request.files:
+            file = request.files['encounters-file']
+            if file.filename.endswith('.xlsx'):
+                df = pd.read_excel(file)
+                save_to_database(df, 'encounters')
+                return 'File uploaded and data loaded into database successfully!'
+            else:
+                return 'Only xlsx files are allowed!'
+        else:
+            return 'I am not a teapot.'
+
     return render_template('admin.html')
 
 # Save DataFrame to SQLite database
-def save_to_database(df):
+def save_to_database(df, table):
     with sqlite3.connect(Config.DATABASE_PATH) as conn:
-        df.to_sql('persons', conn, if_exists='replace', index=False)
+        df.to_sql(table, conn, if_exists='replace', index=False)
 
 # Remove all rows from the table
 def remove_all_rows(table):
