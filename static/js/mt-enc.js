@@ -37,8 +37,8 @@ const encounterEditor = new DataTable.Editor({
             name: 'runner_type',
             type: 'select',
             options: [
-                { label: 'MCMO Registered Participant', value: 'MCMO Registered Participant' },
-                { label: 'Other', value: 'Other'}
+                { label: 'Yes', value: 'yes' },
+                { label: 'No', value: ''}
                 // { label: 'Civilian', value: 'Civilian'},
                 // { label: 'Volunteer', value: 'Volunteer'},
                 // { label: 'Military', value: 'Military'}
@@ -166,13 +166,13 @@ const encounterEditor = new DataTable.Editor({
                 { label: '', value: ''  },
 
                 // Marine Corps Marathon Encounter
-                { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
-                { label: 'Transport to George Washington', value: 'Transport to George Washington' },
-                { label: 'Transport to Howard', value: 'Transport to Howard' },
-                { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
-                { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
-                { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
-                { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
+                // { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
+                // { label: 'Transport to George Washington', value: 'Transport to George Washington' },
+                // { label: 'Transport to Howard', value: 'Transport to Howard' },
+                // { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
+                // { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
+                // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
+                // { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
 
                 // Run with the Maries Medical Encounter
                 { label: 'Transport to Mary Washington', value: 'Transport to Mary Washington' },
@@ -265,7 +265,7 @@ $(document).ready(function () {
         encounterEditor.field('last_name').set(row.last_name)
         encounterEditor.field('age').set(row.age)
         encounterEditor.field('sex').set(row.sex)
-        encounterEditor.field('runner_type').set('MCMO Registered Participant')
+        encounterEditor.field('runner_type').set('yes')
         encounterEditor.buttons('Create')
             .open();
     });
