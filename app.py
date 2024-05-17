@@ -377,6 +377,7 @@ def dashboard():
 @login_required
 def encounters():
     return render_template('encounters.html',
+            username=current_user.name, \
             aid_stations=Config.AID_STATIONS, \
             is_manager=current_user.is_manager, \
             is_admin=current_user.is_admin)

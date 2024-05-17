@@ -38,6 +38,8 @@ const encounterEditor = new DataTable.Editor({
             type: 'checkbox',
             separator: '|',
             options: [{ label: '', value: 1}],
+            unselectedValue: 0,
+            def: 0,
             fieldInfo: 'Check this box if the patient is a registered race participant.'
         },
         {
@@ -46,6 +48,8 @@ const encounterEditor = new DataTable.Editor({
             type: 'checkbox',
             separator: '|',
             options: [{ label: '', value: 1}],
+            unselectedValue: 0,
+            def: 0,
             fieldInfo: 'Check this box if the patient is an active duty service member.'
         },
         {
@@ -240,20 +244,50 @@ const encounterEditor = new DataTable.Editor({
     ]
 });
  
+const aid_station_cols = [
+    { data: 'bib' },
+    { data: 'first_name' },
+    { data: 'last_name' },
+    { data: 'time_in', },
+    { data: 'time_out', },
+    { data: 'presentation', },
+    { data: 'disposition' },
+    { data: 'aid_station' }
+];
+
+const manager_cols = [
+    { data: 'bib' },
+    { data: 'first_name' },
+    { data: 'last_name' },
+    { data: 'sex' },
+    { 
+        data: 'participant',
+        render: (data, type, row) =>
+            type === 'display'
+                ? '<input type="checkbox" class="editor-participant table-checkbox">'
+                : data,
+        className: 'dt-body-center'
+    },
+    { 
+        data: 'active_duty',
+        render: (data, type, row) =>
+            type === 'display'
+                ? '<input type="checkbox" class="editor-active-duty table-checkbox">'
+                : data,
+        className: 'dt-body-center'
+    },
+    { data: 'time_in', },
+    { data: 'time_out', },
+    { data: 'presentation', },
+    { data: 'disposition' },
+    { data: 'aid_station' }
+];
+
 // Encounters DataTable shown in the page
 encounterTable = new DataTable('#encounters-table', {
     idSrc: 'id',
     ajax: './api/encounters'.concat(window.current_aid_station_path),
-    columns: [
-        { data: 'bib' },
-        { data: 'first_name' },
-        { data: 'last_name' },
-        { data: 'time_in', },
-        { data: 'time_out', },
-        { data: 'presentation', },
-        { data: 'disposition' },
-        { data: 'aid_station' }
-    ],
+    columns: window.current_user_is_admin ? manager_cols : aid_station_cols,
     layout: {
         topStart: {
             buttons: [
@@ -265,16 +299,16 @@ encounterTable = new DataTable('#encounters-table', {
     },
     select: {
         style: 'single'
+    },
+    rowCallback: function (row, data) {
+        if (window.current_user_is_admin) {
+            // Set the checked state of the checkbox in the table
+            row.querySelector('input.editor-participant').checked = data.participant == 1;
+            row.querySelector('input.editor-active-duty').checked = data.active_duty == 1;
+        }
     }
+
 });
-
-// encounterTable.on('change', 'input.editor-active_duty', function(){
-//     encounterEditor
-//         .edit(this.closest('tr'), false)
-//         .set('active_duty', this.checked ? 'Yes' : '')
-//         .submit
-// })
-
 
 // Encounters DataTable shown in the page
 let participantsTable = new DataTable('#participants-table', {
@@ -292,6 +326,7 @@ let participantsTable = new DataTable('#participants-table', {
     }
 });
 
+
 $(document).ready(function () {   
     // let table = $('#participants-table').DataTable();
     $('#participants-table tbody').on('click', 'tr', function () {
@@ -307,5 +342,13 @@ $(document).ready(function () {
         encounterEditor.field('participant').set(1)
         encounterEditor.buttons('Create')
             .open();
+    });
+    $('input[type="checkbox"].table-checkbox').on('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        return false;
+        
+        alert('Break');
     });
 });
