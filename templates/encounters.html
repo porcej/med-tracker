@@ -9,7 +9,7 @@
 
     <script type="text/javascript">
       window.current_aid_station = "{{ current_user.username }}";
-      {% if is_manager %}
+      {% if is_manager or is_admin %}
         window.current_aid_station_path = "";
         window.current_aid_station_options = [
           {% for aid_station in aid_stations %}
