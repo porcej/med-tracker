@@ -265,7 +265,7 @@ $(document).ready(function () {
         encounterEditor.field('last_name').set(row.last_name)
         encounterEditor.field('age').set(row.age)
         encounterEditor.field('sex').set(row.sex)
-        encounterEditor.field('runner_type').set('Runer')
+        encounterEditor.field('runner_type').set('MCMO Registered Participant')
         encounterEditor.buttons('Create')
             .open();
     });
