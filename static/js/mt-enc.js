@@ -293,7 +293,18 @@ encounterTable = new DataTable('#encounters-table', {
             buttons: [
                 { extend: 'create', editor: encounterEditor },
                 { extend: 'edit', editor: encounterEditor },
-                { extend: 'remove', editor: encounterEditor }
+                { 
+                    extend: 'remove', editor: encounterEditor,
+                    formMessage: function (e, dt) {
+                        let row = dt
+                            .rows(e.modifier())
+                            .data()[0]
+                        return (
+                            'Are you sure you want to delete this encounter?' +
+                            `<li> ${row['first_name']} ${row['last_name']} ${row['bib'] != "" ? `with bib # ${row['bib']}` : ''}</li>`
+                        );
+                    }
+                }
             ]
         }
     },
