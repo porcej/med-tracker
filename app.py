@@ -421,7 +421,7 @@ def encounters():
 @app.route('/admin', methods=['GET', 'POST'])
 @login_required
 def admin():
-    if current_user.role :
+    if not current_user.is_admin:
         return redirect(url_for('dashboard'))
     if request.method == 'POST':
         if 'remove-people' in request.form:
