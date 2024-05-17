@@ -31,7 +31,7 @@
   <div class="nav">
     <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
     <span>Encounters</span> | 
-    {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> {% endif %} | 
+    {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %} 
     <a href="{{ url_for('logout') }}">Logout</a>
   </div>
   <div class="runners">
