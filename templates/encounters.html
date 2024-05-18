@@ -6,7 +6,6 @@
 
     <link href="{{ url_for('static', filename='vend/dt/css/jquery-ui.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ url_for('static', filename='vend/DataTables/datatables.css') }}" rel="stylesheet" type="text/css">
-
     <script type="text/javascript">
       {% if is_manager or is_admin %}
         window.current_user_is_admin = true;
@@ -27,6 +26,8 @@
     <script src="{{ url_for('static', filename='vend/moment/moment.js') }}"></script>
     <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vend/DataTables/datatables.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/socket.io/4.4.1/socket.io.min.js')}}"></script>
+
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
 </head>
 <body>
