@@ -50,7 +50,7 @@ const encounterEditor = new DataTable.Editor({
             options: [{ label: '', value: 1}],
             unselectedValue: 0,
             def: 0,
-            fieldInfo: 'Check this box if the patient is an active duty service member.'
+            fieldInfo: 'Check this box if the patient is an active-duty service member.'
         },
         {
             label: "Time into Aid Station",
@@ -97,7 +97,7 @@ const encounterEditor = new DataTable.Editor({
                 { label: 'EC Exertional Collapse', value: 'Exertional Collapse' },
                 { label: 'Ha            Headache', value: 'Headache' },
                 { label: 'Dr            Diarrhea', value: 'Diarrhea' },
-                { label: 'aMS        Alterned MS', value: 'Alterned MS' },
+                { label: 'aMS         Altered MS', value: 'Altered MS' },
                 { label: 'HE     Heat Exhaustion', value: 'Heat Exhaustion' },
                 { label: 'HS         Heat Stroke', value: 'Heat Stroke' },
                 { label: 'HN        Hyponatremia', value: 'Hyponatremia' },
@@ -216,7 +216,7 @@ const encounterEditor = new DataTable.Editor({
                 // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
                 // { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
 
-                // Run with the Maries Medical Encounter
+                // Run with the Marines Medical Encounter
                 { label: 'Transport to Mary Washington', value: 'Transport to Mary Washington' },
                 { label: 'Transport to Sentara NOVA', value: 'Transport to Sentara NOVA' },
                 { label: 'Transport to Stafford', value: 'Transport to Stafford' },
@@ -231,7 +231,7 @@ const encounterEditor = new DataTable.Editor({
                 { label: 'Released Awaiting Bus', value: 'Released Awaiting Bus' },
                 { label: 'Released Finished Race', value: 'Released Finished Race' },
                 { label: 'Released Left Course', value: 'Released Left Course' },
-                { label: 'Refused Trasnport', value: 'Refused Trasnport' },
+                { label: 'Refused Transport', value: 'Refused Transport' },
                 { label: 'Left Against Medical Advice', value: 'Left Against Medical Advice' },
                 { label: 'Other Disposition - Specify in notes', value: 'Other Disposition' }
             ]
