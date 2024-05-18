@@ -403,6 +403,7 @@ def admin():
             return f'All removed all runners.'
         elif 'remove-encounters' in request.form:
             remove_all_rows('encounters')
+            send_sio_msg('remove_encounter', 'File Uploaded')
             return f'All removed all encounters.'
         elif 'export-people' in request.form:
             return export_to_xlsx('persons')
@@ -422,6 +423,7 @@ def admin():
             if file.filename.endswith('.xlsx'):
                 df = pd.read_excel(file)
                 save_to_database(df, 'encounters')
+                send_sio_msg('new_encounter', 'File Uploaded')
                 return 'File uploaded and data loaded into database successfully!'
             else:
                 return 'Only xlsx files are allowed!'
