@@ -29,6 +29,8 @@ from flask_login import current_user, LoginManager, login_user, logout_user, log
 from urllib.parse import urlsplit
 from werkzeug.utils import secure_filename
 
+from flask_socketio import SocketIO, emit, join_room, leave_room
+
 
 # Initialize the app
 app = Flask(__name__)
@@ -37,6 +39,9 @@ app.config.from_object(Config)
 login_manager = LoginManager()
 login_manager.login_view  = 'login'
 login_manager.init_app(app)
+
+socketio = SocketIO()
+socketio.init_app(app)
 
 # Setup some user stuff here
 class User(UserMixin):
@@ -502,7 +507,9 @@ def api_encounters(aid_station=None):
                 conn.commit()
             
             new_data = zip_encounters(id=id)
-            return jsonify(new_data)
+            jnew_data = jsonify(new_data)
+            send_sio_msg('edit_encounter', jnew_data)
+            return jnew_data
 
         # Handle Creating a new record
         if action.lower() == 'create':
@@ -518,7 +525,9 @@ def api_encounters(aid_station=None):
                 id = cursor.lastrowid
                 conn.commit()
             new_data = zip_encounters(id=id)
-            return jsonify(new_data)
+            jnew_data = jsonify(new_data)
+            send_sio_msg('new_encounter', jnew_data)
+            return jnew_data
 
         # Handle Remove
         if action.lower() == 'remove':
@@ -528,7 +537,9 @@ def api_encounters(aid_station=None):
                 conn.commit()
             
             new_data = zip_encounters(id=id)
-            return jsonify(new_data)
+            jnew_data = jsonify(new_data)
+            send_sio_msg('remove_encounter', jnew_data)
+            return jnew_data
 
     # Handle Get Request
     if request.method == "GET":
@@ -539,17 +550,22 @@ def api_encounters(aid_station=None):
     return jsonify("Oh no, you should never be here...")
 
 
+
+
+
 # *====================================================================*
-#         Utilities
+#         SocketIO API
 # *====================================================================*
-# Parses a time string in the format HH:mm and returns a number rep
-def parse_time(str):
-    try:
-        return int(str.replace(":",""))
-    except:
-        return -1
+# Handler for a message recieved over 'connect' channel
+@socketio.on('connect', namespace="/api")
+def test_connect():
+    emit('after connect',  {'data':'Lets dance'})
+
+def send_sio_msg(msg_type, msg, room=None):
+    broadcast = room is None
+    socketio.emit(msg_type, namespace='/api')
 
 if __name__ == '__main__':
     create_database()
-    app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
+    socketio.run(app, debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
     
