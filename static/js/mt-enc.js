@@ -143,14 +143,20 @@ const encounterEditor = new DataTable.Editor({
             label: 'Food Provided',
             name: 'food',
             type: 'checkbox',
-            options: [{label: '', value: 1}],
+            separator: '|',
+            options: [{ label: '', value: 1}],
+            unselectedValue: 0,
+            def: 0,
             fieldInfo: 'Check this box if the patient was provided with food stuffs.'
         },
         {
             label: 'Oral Fluids Provided',
             name: 'oral_fluid',
             type: 'checkbox',
-            options: [{label: '', value: 1}],
+            separator: '|',
+            options: [{ label: '', value: 1}],
+            unselectedValue: 0,
+            def: 0,
             fieldInfo: 'Check this box if the patient was provided with fluids by mouth.'
         },
         {
