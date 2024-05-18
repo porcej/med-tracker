@@ -365,7 +365,12 @@ $(document).ready(function () {
         event.stopPropagation();
         
         return false;
-        
-        alert('Break');
     });
+    socket = io.connect('//' + document.domain + ':' + location.port + '/api');
+    socket.on('after connect', function(msg) {console.log('Connected')});
+    socket.on('new_encounter', function(msg) { encounterTable.ajax.reload() });
+    socket.on('edit_encounter', function(msg) { encounterTable.ajax.reload() });
+    socket.on('edit_encounter', function(msg) { encounterTable.ajax.reload() });
+    socket.on('remove_encounter', function(msg) { encounterTable.ajax.reload() });
+
 });
