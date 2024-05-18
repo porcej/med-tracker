@@ -4,6 +4,8 @@
     <title>Dashboard | Med Tracking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+    <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/socket.io/4.4.1/socket.io.min.js')}}"></script>
 </head>
 <body>
 <div class="content">
@@ -63,5 +65,13 @@
         </table>
     </div>
 </div>
+<script type="text/javascript">
+  socket = io.connect('//' + document.domain + ':' + location.port + '/api');
+  socket.on('after connect', function(msg) {console.log('Connected')});
+  socket.on('new_encounter', function(msg) { location.reload() });
+  socket.on('edit_encounter', function(msg) { location.reload() });
+  socket.on('edit_encounter', function(msg) { location.reload() });
+  socket.on('remove_encounter', function(msg) { location.reload() });
+</script>
 </body>
 </html>
