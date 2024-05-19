@@ -14,6 +14,13 @@
 </head>
 <body>
 <div class="content">
+      <div class="nav">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
+    <a href="{{ url_for('encounters') }}">Encounters</a> | 
+    {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
+    <a href="{{ url_for('chat') }}">Chat</a> | 
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </div>
     <div class="nav">
         <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
         <a href="{{ url_for('encounters') }}">Encounters</a> | 
