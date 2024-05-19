@@ -351,12 +351,13 @@ $(document).ready(function () {
         encounterEditor
             .create()
             .title(`New Encounter with ${row.last_name}, ${row.first_name}`);
-        encounterEditor.field('bib').set(row.bib)
-        encounterEditor.field('first_name').set(row.first_name)
-        encounterEditor.field('last_name').set(row.last_name)
-        encounterEditor.field('age').set(row.age)
-        encounterEditor.field('sex').set(row.sex)
-        encounterEditor.field('participant').set(1)
+        encounterEditor.field('bib').set(row.bib);
+        encounterEditor.field('first_name').set(row.first_name);
+        encounterEditor.field('last_name').set(row.last_name);
+        encounterEditor.field('age').set(row.age);
+        encounterEditor.field('sex').set(row.sex);
+        encounterEditor.field('participant').set(1);
+        encounterEditor.field('active_duty').set(row.active_duty);
         encounterEditor.buttons('Create')
             .open();
     });
