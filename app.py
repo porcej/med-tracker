@@ -399,7 +399,7 @@ def chat():
     room = 'chat'
     # if name == '' or room == '':
     #     return redirect(url_for('.index'))
-    return render_template('chat.html', name=name, room=room)
+    return render_template('chat.html', name=name, room=room, is_admin=current_user.is_admin)
 
 
 
