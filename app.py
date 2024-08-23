@@ -332,8 +332,8 @@ def dashboard():
 
         # Closed Encounters with Transport Only
         cursor.execute('''SELECT COUNT(*) FROM encounters
-                          WHERE hospital IS NOT NULL
-                          AND hospital<>""
+                        WHERE disposition IS NOT NULL
+                          AND disposition like 'Transport%'
                           AND aid_station=?
                           ORDER BY time_in
                        ''', (aid_station,))
@@ -365,8 +365,8 @@ def dashboard():
     
     # Closed Encounters with Transport Only
     cursor.execute('''SELECT COUNT(*) FROM encounters
-                      WHERE hospital IS NOT NULL
-                      AND hospital<>""
+                      WHERE disposition IS NOT NULL
+                      AND disposition like 'Transport%'
                       ORDER BY time_in
                    ''')
     synopsis['total']['transported'] = cursor.fetchone()[0]
