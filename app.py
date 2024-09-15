@@ -78,7 +78,10 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(id):
-    return Config.USERS[int(id)]
+    try:
+        return Config.USERS[int(id)]
+    except: 
+        return None
 
 
 # *====================================================================*
