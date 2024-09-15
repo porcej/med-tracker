@@ -13,16 +13,16 @@
     <div class="col-md-4">
       <form action="{{ url_for('login') }}" method="post" novalidate="" class="login-form">
         <p>
-          <label for="username">Aid Station</label><br>
+          <label for="username">Assignment</label><br>
           <select name="username" id="aid-station-select">
-            <option value="">Aid Station</option>
+            <option value="">Assignment</option>
             {% for aid_station in aid_stations %}
                <option value="{{ aid_station}}">{{ aid_station }}</option>
             {% endfor %}
           </select>
         </p>
         <p>
-          <label for="person">Name (First Initial Lastname)</label><br>
+          <label for="person">Name (First Initial Lastname or Ameature Radio Callsign)</label><br>
           <input id="person" name="person" required="" size="32" type="text" value="" class="form-input"><br>
         </p>
         <p>
