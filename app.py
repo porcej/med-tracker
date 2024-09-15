@@ -16,8 +16,7 @@ __license__ = "MIT"
 
 
 from config import Config
-from pprint import pprint
-import datetime
+from datetime import datetime
 from io import BytesIO
 import os
 import pandas as pd
@@ -45,14 +44,24 @@ socketio.init_app(app)
 
 # Setup some user stuff here
 class User(UserMixin):
-    def __init__(self, name, id, role, active=True):
+    def __init__(self, name, id, role, person='', active=True):
         self.id = id
         self.name = name
         self.role = role
+        self.person = person
         self.active = active
 
     def get_id(self):
         return self.id
+
+    def get_person(self):
+        return self.person
+
+    def user_stamp(self):
+        return f'{self.name}-{self.person}'
+
+    def set_person(self, person):
+        self.person = person
 
     @property
     def is_active(self):
@@ -90,7 +99,7 @@ for n, u in Config.USER_ACCOUNTS.items():
     # Set password if no password is provided
     if (u['password'] is None or u['password'] == ''):
         u['password'] = Config.USER_PASSWORD
-    Config.USERS.append(User(n, idx, u['role']))
+    Config.USERS.append(User(name=n, id=idx, role=u['role']))
     idx += 1
 
 # *====================================================================*
@@ -102,108 +111,165 @@ if not os.path.exists('db'):
 
 # Function to connect to SQLLite Database
 def db_connect():
-    return sqlite3.connect(Config.DATABASE_PATH)
+    try:
+        conn = sqlite3.connect(Config.DATABASE_PATH)
+        return conn
+    except sqlite3.Error as e:
+        print(f"Database error: {e}", file=sys.stderr)
+        return None
 
 
 # Function to create an SQLite database and table to store data
 def create_database():
-    conn =  db_connect()
-    cursor = conn.cursor()
+    with db_connect() as conn:
+        cursor = conn.cursor()
 
-    # Encounters Table - Holds a list of all encounters
-    cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      aid_station TEXT,
-                      bib TEXT,
-                      first_name TEXT,
-                      last_name TEXT,
-                      age INTEGER,
-                      sex TEXT,
-                      participant INTEGER,
-                      active_duty INTEGER,
-                      time_in TEXT,
-                      time_out TEXT,
-                      presentation TEXT,
-                      vitals TEXT,
-                      iv TEXT,
-                      iv_fluid_count INTEGER,
-                      oral_fluid INTEGER,
-                      food INTEGER,
-                      na TEXT,
-                      kplus TEXT,
-                      cl TEXT,
-                      tco TEXT,
-                      bun TEXT,
-                      cr TEXT,
-                      glu TEXT,
-                      treatments TEXT,
-                      disposition TEXT,
-                      hospital TEXT,
-                      notes TEXT
-                   )''')
+        # Encounters Table - Holds a list of all encounters
+        cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          aid_station TEXT,
+                          bib TEXT,
+                          first_name TEXT,
+                          last_name TEXT,
+                          age INTEGER,
+                          sex TEXT,
+                          participant INTEGER,
+                          active_duty INTEGER,
+                          time_in TEXT,
+                          time_out TEXT,
+                          presentation TEXT,
+                          vitals TEXT,
+                          iv TEXT,
+                          iv_fluid_count INTEGER,
+                          oral_fluid INTEGER,
+                          food INTEGER,
+                          na TEXT,
+                          kplus TEXT,
+                          cl TEXT,
+                          tco TEXT,
+                          bun TEXT,
+                          cr TEXT,
+                          glu TEXT,
+                          treatments TEXT,
+                          disposition TEXT,
+                          hospital TEXT,
+                          notes TEXT,
+                          delete_flag INTEGER,
+                          delete_reason TEXT
 
-    # Vitals Table - Holds a List of all Vitasl
-    cursor.execute('''CREATE TABLE IF NOT EXISTS vitals (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      encounter_id INTEGER,
-                      vital_time TEXT,
-                      temp TEXT,
-                      resp TEXT,
-                      pulse TEXT,
-                      bp TEXT,
-                      notes TEXT
-                   )''')
+                       )''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      bib TEXT,
-                      first_name TEXT,
-                      last_name TEXT,
-                      age INTEGER,
-                      sex TEXT,
-                      participant INTEGER,
-                      active_duty INTEGER
-                   )''')
+        cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='delete_flag' ''')
+        if cursor.fetchall()[0][0] == 0:
+            print("Updating encounters table", file=sys.stderr)
+            cursor.execute('''ALTER TABLE encounters ADD delete_flag INTEGER DEFAULT 0 ''')
+            cursor.execute('''ALTER TABLE encounters ADD delete_reason TEXT DEFAULT '' ''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      code TEXT,
-                      description TEXT
-                   )''')
+            # Encounters Table - Holds a list of all encounters
+        cursor.execute('''CREATE TABLE IF NOT EXISTS encounters_audit_log (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          action TEXT,
+                          record_id TEXT,
+                          timestamp TEXT,
+                          user_id TEXT,
+                          resultant_value TEXT
+                       )''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS disposition (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      code TEXT,
-                      description TEXT
-                   )''')
+        # Vitals Table - Holds a List of all Vitasl
+        cursor.execute('''CREATE TABLE IF NOT EXISTS vitals (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          encounter_id INTEGER,
+                          vital_time TEXT,
+                          temp TEXT,
+                          resp TEXT,
+                          pulse TEXT,
+                          bp TEXT,
+                          notes TEXT
+                       )''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      username TEXT NOT NULL,
-                      password TEXT NOT NULL,
-                      role TEXT
-                   )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          bib TEXT,
+                          first_name TEXT,
+                          last_name TEXT,
+                          age INTEGER,
+                          sex TEXT,
+                          participant INTEGER,
+                          active_duty INTEGER
+                       )''')
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS aid_stations (
-                      id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      name TEXT NOT NULL
-                   )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          code TEXT,
+                          description TEXT
+                       )''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS disposition (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          code TEXT,
+                          description TEXT
+                       )''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          username TEXT NOT NULL,
+                          password TEXT NOT NULL,
+                          role TEXT
+                       )''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS aid_stations (
+                          id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          name TEXT NOT NULL
+                       )''')
 
 
 
-    print("Database created!", file=sys.stderr)
-    conn.commit()
-    conn.close()
+        print("Database created!", file=sys.stderr)
+        conn.commit()
 
+# Function to execute query and return the last row ID after executing seaid query
+def execute_query(query, values=None):
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with db_connect() as conn:
+            cursor = conn.cursor()
+            if values is None:
+                cursor.execute(query)
+            else:
+                cursor.execute(query, values)
+            id = cursor.lastrowid
+            conn.commit()
+            return id
+    except sqlite3.Error as e:
+        print(f"Database error executing query: {e}", file=sys.stderr)
+        return None
+
+
+# Function to log audit transactions
+def log_encounter_audit(action, record_id, user_id, resultant_value):
+    try:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with db_connect() as conn:
+            cursor = conn.cursor()
+            query = f"INSERT INTO encounters_audit_log (action, record_id, timestamp, user_id,  resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
+            cursor.execute(query)
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"Database error writing audit log: {e}", file=sys.stderr)
 
 # Function to export data as a zipped dict
-def zip_encounters(id=None, aid_station=None):
-    where_clause = None
-    if id is not None or aid_station is not None:
-        if id is not None:
-            where_clause = f'ID={id}'
-        if aid_station is not None:
-            where_clause = f"aid_station='{aid_station}'"
+def zip_encounters(id=None, aid_station=None, include_deleted=False, only_deleted=False):
+    where_clauses = []
+    if id is not None:
+        where_clauses.append(f'ID={id}')
+    if aid_station is not None:
+        where_clauses.append(f"aid_station='{aid_station}'")
+    if include_deleted is False:
+        where_clauses.append('delete_flag!=1')
+    if only_deleted:
+        where_clauses.append('delete_flag=1')
+
+    where_clause = ' AND '.join(where_clauses)
 
     data = zip_table(table_name='encounters', where_clause=where_clause)
     return data
@@ -230,9 +296,10 @@ def zip_vitals(encounter_id=None, id=None):
 def zip_table(table_name, where_clause=None):
     if where_clause is None:
         where_clause = ""
-    else:
+
+    if len(where_clause) > 0:
         where_clause = f' WHERE {where_clause}'
-    with sqlite3.connect(Config.DATABASE_PATH) as conn:
+    with db_connect() as conn:
         cursor = conn.cursor()
         select_statement = f'SELECT * FROM {table_name}{where_clause if where_clause else ""}'
         cursor.execute(select_statement)
@@ -257,26 +324,30 @@ def zip_table(table_name, where_clause=None):
 # *--------------------------------------------------------------------*
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if current_user.is_authenticated:
-        print("Current user is at login page but is authenticated", file=sys.stderr)
-        return redirect(url_for('dashboard'))
+    try:
+        if current_user.is_authenticated:
+            print("Current user is at login page but is authenticated", file=sys.stderr)
+            return redirect(url_for('dashboard'))
 
-    username = request.form.get('username')
-    password = request.form.get('password')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        person = request.form.get('person')
 
-
-    # If a post request was made, find the user by 
-    # filtering for the username
-    if request.method == "POST":
-        if username in Config.USER_ACCOUNTS.keys():
-            if password == Config.USER_ACCOUNTS[username]['password']:
-                user = Config.USERS[Config.USER_ACCOUNTS[username]['id']]
-                login_user(user, remember='y')
-                return redirect(url_for('dashboard'))
-        flash('Invalid username or password', 'error')
-        # Redirect the user back to the home
-        # (we'll create the home route in a moment)
-    return render_template("login.html", aid_stations=Config.USER_ACCOUNTS.keys())
+        # If a post request was made, find the user by 
+        # filtering for the username
+        if request.method == "POST":
+            if username in Config.USER_ACCOUNTS.keys():
+                if password == Config.USER_ACCOUNTS[username]['password']:
+                    user = Config.USERS[Config.USER_ACCOUNTS[username]['id']]
+                    user.set_person(person)
+                    login_user(user, remember='y')
+                    return redirect(url_for('dashboard'))
+            flash('Invalid username or password', 'error')
+            # Redirect the user back to the home
+            # (we'll create the home route in a moment)
+        return render_template("login.html", aid_stations=Config.USER_ACCOUNTS.keys())
+    except Exception as e:
+        flash('An unexpected error occurred.', 'error')
 
 @app.route('/logout')
 def logout():
@@ -501,7 +572,6 @@ def api_encounters(aid_station=None):
         query = ""
 
         for key in request.form.keys():
-            print(f"Key: {key}", file=sys.stderr)
             matches = re.search(pattern, key)
             if matches:
                 id = int(matches.group(1))
@@ -510,51 +580,36 @@ def api_encounters(aid_station=None):
 
         # Handle Editing an existing record
         if action.lower() == 'edit':
+            data_keys = data.keys()
+            query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
+            execute_query(query, data)
 
-            set_elem = []
-            for col in data.keys():
-                set_elem.append(f" {col}='{data[col]}'")
-
-            query = f"UPDATE encounters SET {', '.join(set_elem)} WHERE ID={id}"
-
-            print(f"Query: {query}", file=sys.stderr)
-            with sqlite3.connect(Config.DATABASE_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute(query)
-                conn.commit()
-            
             new_data = zip_encounters(id=id)
             jnew_data = jsonify(new_data)
+            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
             send_sio_msg('edit_encounter', jnew_data)
             return jnew_data
 
         # Handle Creating a new record
         if action.lower() == 'create':
-            col_elem = data.keys()
-            val_elem = []
-            for col in col_elem:
-                val_elem.append(f"'{data[col]}'")
+            data_keys = data.keys()
+            query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys) })"
+            id = execute_query(query, data)
 
-            query = f"INSERT INTO encounters ( {', '.join(col_elem) }) VALUES ({ ', '.join(val_elem) })"
-            with sqlite3.connect(Config.DATABASE_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute(query)
-                id = cursor.lastrowid
-                conn.commit()
             new_data = zip_encounters(id=id)
             jnew_data = jsonify(new_data)
+            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'))
             send_sio_msg('new_encounter', jnew_data)
             return jnew_data
 
         # Handle Remove
         if action.lower() == 'remove':
-            with sqlite3.connect(Config.DATABASE_PATH) as conn:
-                cursor = conn.cursor()
-                cursor.execute(f"DELETE FROM encounters WHERE id={id}")
-                conn.commit()
+            query = f"UPDATE encounters SET delete_flag=1 WHERE id={id}"
+            execute_query(query)
             
             new_data = zip_encounters(id=id)
             jnew_data = jsonify(new_data)
+            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
             send_sio_msg('remove_encounter', jnew_data)
             return jnew_data
 
