@@ -1,5 +1,6 @@
 // Main / parent / top level Editor
 let encounterTable;
+let openVals;
 const encounterEditor = new DataTable.Editor({
     ajax: './api/encounters'.concat(window.current_aid_station_path),
     table: '#encounters-table',
@@ -208,22 +209,22 @@ const encounterEditor = new DataTable.Editor({
                 { label: '', value: ''  },
 
                 // Marine Corps Marathon Encounter
-                // { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
-                // { label: 'Transport to George Washington', value: 'Transport to George Washington' },
-                // { label: 'Transport to Howard', value: 'Transport to Howard' },
-                // { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
-                // { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
-                // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
-                // { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
+                { label: 'Transport to Georgetown', value: 'Transport to Georgetown' },
+                { label: 'Transport to George Washington', value: 'Transport to George Washington' },
+                { label: 'Transport to Howard', value: 'Transport to Howard' },
+                { label: 'Transport to Washington Hosp Ctr', value: 'Transport to Washington Hosp Ctr' },
+                { label: 'Transport to INOVA Fairfax', value: 'Transport to INOVA Fairfax' },
+                { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
+                { label: 'Transport to VA Hosp Ctr', value: 'Transport to VA Hosp Ctr' },
 
                 // Run with the Marines Medical Encounter
                 { label: 'Transport to Mary Washington', value: 'Transport to Mary Washington' },
-                { label: 'Transport to Sentara NOVA', value: 'Transport to Sentara NOVA' },
-                { label: 'Transport to Stafford', value: 'Transport to Stafford' },
-                { label: 'Transport to Ft Belvoir', value: 'Transport to Ft Belvoir' },
-                { label: 'Transport to Naval Clinic Quantico', value: 'Transport to Naval Clinic Quantico' },
-                { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
-                { label: 'Transport to Spotsylvania Regional', value: 'Transport to Spotsylvania Regional' },
+                // { label: 'Transport to Sentara NOVA', value: 'Transport to Sentara NOVA' },
+                // { label: 'Transport to Stafford', value: 'Transport to Stafford' },
+                // { label: 'Transport to Ft Belvoir', value: 'Transport to Ft Belvoir' },
+                // { label: 'Transport to Naval Clinic Quantico', value: 'Transport to Naval Clinic Quantico' },
+                // { label: 'Transport to INOVA Alexandria', value: 'Transport to INOVA Alexandria' },
+                // { label: 'Transport to Spotsylvania Regional', value: 'Transport to Spotsylvania Regional' },
 
                 // Common Dispositions
                 { label: 'Transport to Other - Specify in notes', value: 'Transport to Other' },
@@ -249,6 +250,42 @@ const encounterEditor = new DataTable.Editor({
         }        
     ]
 });
+encounterEditor
+    .on('open', function() {
+    // openVals = JSON.stringify(encounterEditor.get());
+    openVals = encounterEditor.get();
+    encounterEditor
+        .on('preClose', function (e) {
+                // On close, check if the values have changed and ask for closing confirmation if they have
+                if (JSON.stringify(openVals) !== JSON.stringify(encounterEditor.get())) {
+                    return confirm(
+                        'You have unsaved changes. Are you sure you want to exit?'
+                    );
+                }
+            });
+        })
+    .on('postCreate postEdit close', function () {
+        encounterEditor.off('preClose');
+        openVals = null;
+    })
+    .on('preSubmit', function (e, o, action) {
+        if (action !== 'edit') {
+            return;
+        }
+        const oKey = Object.keys(o.data)[0];
+        $.each(o.data[oKey], function (key, value) {
+        
+            // Remove fields that we started with            
+            if (JSON.stringify(value) === JSON.stringify(openVals[key])) {
+                delete o.data[oKey][key];
+            }
+        });
+        // If no data remains, cancel the submission
+        if ($.isEmptyObject(o.data[oKey])) {
+            this.close();
+            return false;
+        }
+    });
  
 const aid_station_cols = [
     { data: 'bib' },
@@ -298,7 +335,7 @@ encounterTable = new DataTable('#encounters-table', {
         topStart: {
             buttons: [
                 { extend: 'create', editor: encounterEditor },
-                { extend: 'edit', editor: encounterEditor },
+                { extend: 'edit', editor: encounterEditor, submit: 'changed' },
                 { 
                     extend: 'remove', editor: encounterEditor,
                     formMessage: function (e, dt) {
@@ -369,8 +406,8 @@ $(document).ready(function () {
     });
     socket = io.connect('//' + document.domain + ':' + location.port + '/api');
     socket.on('after connect', function(msg) {console.log('Connected')});
+    socket.on('disconnect', function(msg) { console.log('Disconnect')});
     socket.on('new_encounter', function(msg) { encounterTable.ajax.reload() });
-    socket.on('edit_encounter', function(msg) { encounterTable.ajax.reload() });
     socket.on('edit_encounter', function(msg) { encounterTable.ajax.reload() });
     socket.on('remove_encounter', function(msg) { encounterTable.ajax.reload() });
 
