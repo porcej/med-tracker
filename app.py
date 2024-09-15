@@ -154,7 +154,7 @@ def create_database():
                           disposition TEXT,
                           hospital TEXT,
                           notes TEXT,
-                          delete_flag INTEGER,
+                          delete_flag INTEGER DEFAULT 0,
                           delete_reason TEXT
 
                        )''')
@@ -372,6 +372,7 @@ def dashboard():
         cursor.execute('''SELECT * FROM encounters
                           WHERE ( time_out IS NULL OR time_out="")
                           AND aid_station=?
+                          AND delete_flag != 1
                           ORDER BY time_in
                        ''', (aid_station,))
         active_encounters_by_station[aid_station] = cursor.fetchall()
@@ -380,7 +381,7 @@ def dashboard():
         synopsis['stations'][aid_station] = {}
 
         # All Encounters
-        cursor.execute("SELECT COUNT(*) FROM encounters WHERE aid_station=?", (aid_station,))
+        cursor.execute("SELECT COUNT(*) FROM encounters WHERE aid_station=? AND delete_flag !=1 ", (aid_station,))
         synopsis['stations'][aid_station]['encounters'] = cursor.fetchone()[0]
 
         # Active Encounters (have a start time and not an end time)
@@ -388,6 +389,7 @@ def dashboard():
                           WHERE time_in IS NOT NULL
                           AND ( time_out IS NULL OR time_out="")
                           AND aid_station=?
+                          AND delete_flag <> 1
                           ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['active'] = cursor.fetchone()[0]
@@ -397,6 +399,7 @@ def dashboard():
                           WHERE time_out IS NOT NULL
                           AND time_out<>""
                           AND aid_station=?
+                          AND delete_flag <> 1
                           ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['discharged'] = cursor.fetchone()[0]
@@ -406,6 +409,7 @@ def dashboard():
                         WHERE disposition IS NOT NULL
                           AND disposition like 'Transport%'
                           AND aid_station=?
+                          AND delete_flag <> 1
                           ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['transported'] = cursor.fetchone()[0]
@@ -413,7 +417,7 @@ def dashboard():
 
     # All encounter recoreds
     cursor.execute('''SELECT COUNT(*) FROM encounters
-                      ORDER BY time_in
+                      WHERE delete_flag <> 1
                    ''')
     synopsis['total']['encounters'] = cursor.fetchone()[0]
 
@@ -421,6 +425,7 @@ def dashboard():
     cursor.execute('''SELECT COUNT(*) FROM encounters
                       WHERE time_in IS NOT NULL
                       AND ( time_out IS NULL OR time_out="")
+                      AND delete_flag <> 1
                       ORDER BY time_in
                    ''')
     synopsis['total']['active'] = cursor.fetchone()[0]
@@ -429,6 +434,7 @@ def dashboard():
     cursor.execute('''SELECT COUNT(*) FROM encounters
                       WHERE time_out IS NOT NULL
                       AND time_out<>""
+                      AND delete_flag != 1
                       ORDER BY time_in
                    ''')
     synopsis['total']['discharged'] = cursor.fetchone()[0]
@@ -438,6 +444,7 @@ def dashboard():
     cursor.execute('''SELECT COUNT(*) FROM encounters
                       WHERE disposition IS NOT NULL
                       AND disposition like 'Transport%'
+                      AND delete_flag != 1
                       ORDER BY time_in
                    ''')
     synopsis['total']['transported'] = cursor.fetchone()[0]
