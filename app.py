@@ -241,7 +241,7 @@ def execute_query(query, values=None):
             conn.commit()
             return id
     except sqlite3.Error as e:
-        print(f"Database error executing query: {e}", file=sys.stderr)
+        print(f"Database error executing query {query}: {e}", file=sys.stderr)
         return None
 
 
