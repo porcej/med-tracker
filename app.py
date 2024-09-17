@@ -590,9 +590,16 @@ def api_encounters(aid_station=None):
 
         # Handle Editing an existing record
         if action.lower() == 'edit':
-            data_keys = data.keys()
-            query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
-            execute_query(query, data)
+            # data_keys = data.keys()
+
+            data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
+            data_vals = values = list(data.values()) + [id]
+
+            query = f"UPDATE encounters SET {data_cols} WHERE id = ?"
+            execute_query(query, data_vals
+                )
+            # query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
+            # execute_query(query, data)
 
             new_data = zip_encounters(id=id)
             jnew_data = jsonify(new_data)
