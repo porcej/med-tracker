@@ -2,7 +2,7 @@
 let encounterTable;
 let openVals;
 const encounterEditor = new DataTable.Editor({
-    ajax: './api/encounters'.concat(window.current_aid_station_path),
+    ajax: './data/encounters'.concat(window.current_aid_station_path),
     table: '#encounters-table',
     idSrc: 'id',
     fields: [
@@ -329,7 +329,7 @@ const manager_cols = [
 // Encounters DataTable shown in the page
 encounterTable = new DataTable('#encounters-table', {
     idSrc: 'id',
-    ajax: './api/encounters'.concat(window.current_aid_station_path),
+    ajax: './data/encounters'.concat(window.current_aid_station_path),
     columns: window.current_user_is_admin ? manager_cols : aid_station_cols,
     layout: {
         topStart: {
@@ -367,7 +367,7 @@ encounterTable = new DataTable('#encounters-table', {
 // Encounters DataTable shown in the page
 let participantsTable = new DataTable('#participants-table', {
     idSrc: 'id',
-    ajax: './api/participants/',
+    ajax: './data/participants/',
     columns: [
         { data: 'bib' },
         { data: 'first_name' },

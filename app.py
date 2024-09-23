@@ -551,19 +551,19 @@ def export_to_xlsx(table):
 
 
 # *====================================================================*
-#         API
+#         Internal API - available at /data
 # *====================================================================*
-@app.route('/api/participants/', methods=['GET'])
+@app.route('/data/participants/', methods=['GET'])
 @login_required
-def api_participants():
+def data_participants():
     data = zip_table("persons")
     return jsonify(data)
 
 
-@app.route('/api/encounters', methods=['GET', 'POST'])
-@app.route('/api/encounters/<aid_station>', methods=['GET', 'POST'])
+@app.route('/data/encounters', methods=['GET', 'POST'])
+@app.route('/data/encounters/<aid_station>', methods=['GET', 'POST'])
 @login_required
-def api_encounters(aid_station=None):
+def data_encounters(aid_station=None):
     if aid_station is not None:
         aid_station = aid_station.replace("_", " ")
         aid_station = aid_station.replace("--", "/")

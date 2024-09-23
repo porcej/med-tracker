@@ -1,7 +1,7 @@
 // Main / parent / top level Editor
 let encounterTable;
 const encounterEditor = new DataTable.Editor({
-    ajax: './api/encounters'.concat(window.current_aid_station_path),
+    ajax: './data/encounters'.concat(window.current_aid_station_path),
     table: '#encounters-table',
     idSrc: 'id',
     fields: [
@@ -208,7 +208,7 @@ const encounterEditor = new DataTable.Editor({
 // Encounters DataTable shown in the page
 encounterTable = new DataTable('#encounters-table', {
     idSrc: 'id',
-    ajax: './api/encounters'.concat(window.current_aid_station_path),
+    ajax: './data/encounters'.concat(window.current_aid_station_path),
     columns: [
         { data: 'bib' },
         { data: 'first_name' },
@@ -237,7 +237,7 @@ encounterTable = new DataTable('#encounters-table', {
 // Encounters DataTable shown in the page
 let participantsTable = new DataTable('#participants-table', {
     idSrc: 'id',
-    ajax: './api/participants/',
+    ajax: './data/participants/',
     columns: [
         { data: 'bib' },
         { data: 'first_name' },
