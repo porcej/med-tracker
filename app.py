@@ -16,7 +16,6 @@ __license__ = "MIT"
 
 
 from config import Config
-from datetime import datetime
 from io import BytesIO
 import os
 import pandas as pd
@@ -29,6 +28,8 @@ from urllib.parse import urlsplit
 from werkzeug.utils import secure_filename
 
 from flask_socketio import SocketIO, emit, join_room, leave_room
+
+from models import Db
 
 
 # Initialize the app
@@ -108,214 +109,8 @@ for n, u in Config.USER_ACCOUNTS.items():
 # *====================================================================*
 #         INITIALIZE DB & DB access
 # *====================================================================*
-# This should be a recursive walk for the database path... TODO
-if not os.path.exists('db'):
-    os.makedirs('db')
+db = Db(Config.DATABASE_PATH)
 
-# Function to connect to SQLLite Database
-def db_connect():
-    try:
-        conn = sqlite3.connect(Config.DATABASE_PATH)
-        return conn
-    except sqlite3.Error as e:
-        print(f"Database error: {e}", file=sys.stderr)
-        return None
-
-
-# Function to create an SQLite database and table to store data
-def create_database():
-    with db_connect() as conn:
-        cursor = conn.cursor()
-
-        # Encounters Table - Holds a list of all encounters
-        cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          aid_station TEXT,
-                          bib TEXT,
-                          first_name TEXT,
-                          last_name TEXT,
-                          age INTEGER,
-                          sex TEXT,
-                          participant INTEGER,
-                          active_duty INTEGER,
-                          time_in TEXT,
-                          time_out TEXT,
-                          presentation TEXT,
-                          vitals TEXT,
-                          iv TEXT,
-                          iv_fluid_count INTEGER,
-                          oral_fluid INTEGER,
-                          food INTEGER,
-                          na TEXT,
-                          kplus TEXT,
-                          cl TEXT,
-                          tco TEXT,
-                          bun TEXT,
-                          cr TEXT,
-                          glu TEXT,
-                          treatments TEXT,
-                          disposition TEXT,
-                          hospital TEXT,
-                          notes TEXT,
-                          delete_flag INTEGER DEFAULT 0,
-                          delete_reason TEXT
-
-                       )''')
-
-        cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='delete_flag' ''')
-        if cursor.fetchall()[0][0] == 0:
-            print("Updating encounters table", file=sys.stderr)
-            cursor.execute('''ALTER TABLE encounters ADD delete_flag INTEGER DEFAULT 0 ''')
-            cursor.execute('''ALTER TABLE encounters ADD delete_reason TEXT DEFAULT '' ''')
-
-            # Encounters Table - Holds a list of all encounters
-        cursor.execute('''CREATE TABLE IF NOT EXISTS encounters_audit_log (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          action TEXT,
-                          record_id TEXT,
-                          timestamp TEXT,
-                          user_id TEXT,
-                          resultant_value TEXT
-                       )''')
-
-        # Vitals Table - Holds a List of all Vitasl
-        cursor.execute('''CREATE TABLE IF NOT EXISTS vitals (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          encounter_id INTEGER,
-                          vital_time TEXT,
-                          temp TEXT,
-                          resp TEXT,
-                          pulse TEXT,
-                          bp TEXT,
-                          notes TEXT
-                       )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS persons (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          bib TEXT,
-                          first_name TEXT,
-                          last_name TEXT,
-                          age INTEGER,
-                          sex TEXT,
-                          participant INTEGER,
-                          active_duty INTEGER
-                       )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS presentation (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          code TEXT,
-                          description TEXT
-                       )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS disposition (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          code TEXT,
-                          description TEXT
-                       )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          username TEXT NOT NULL,
-                          password TEXT NOT NULL,
-                          role TEXT
-                       )''')
-
-        cursor.execute('''CREATE TABLE IF NOT EXISTS aid_stations (
-                          id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          name TEXT NOT NULL
-                       )''')
-
-
-
-        print("Database created!", file=sys.stderr)
-        conn.commit()
-
-# Function to execute query and return the last row ID after executing seaid query
-def execute_query(query, values=None):
-    try:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with db_connect() as conn:
-            cursor = conn.cursor()
-            if values is None:
-                cursor.execute(query)
-            else:
-                cursor.execute(query, values)
-            id = cursor.lastrowid
-            conn.commit()
-            return id
-    except sqlite3.Error as e:
-        print(f"Database error executing query {query}: {e}", file=sys.stderr)
-        return None
-
-
-# Function to log audit transactions
-def log_encounter_audit(action, record_id, user_id, resultant_value):
-    try:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with db_connect() as conn:
-            cursor = conn.cursor()
-            query = f"INSERT INTO encounters_audit_log (action, record_id, timestamp, user_id,  resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
-            cursor.execute(query)
-            conn.commit()
-    except sqlite3.Error as e:
-        print(f"Database error writing audit log: {e}", file=sys.stderr)
-
-# Function to export data as a zipped dict
-def zip_encounters(id=None, aid_station=None, include_deleted=False, only_deleted=False):
-    where_clauses = []
-    if id is not None:
-        where_clauses.append(f'ID={id}')
-    if aid_station is not None:
-        where_clauses.append(f"aid_station='{aid_station}'")
-    if include_deleted is False:
-        where_clauses.append('delete_flag!=1')
-    if only_deleted:
-        where_clauses.append('delete_flag=1')
-
-    where_clause = ' AND '.join(where_clauses)
-
-    data = zip_table(table_name='encounters', where_clause=where_clause)
-    return data
-
-
-# Function to export data as a zipped dict
-def zip_vitals(encounter_id=None, id=None):
-    where_clause = None
-    if encounter_id is not None and id is not None:
-        where_clause = f'ENCOUNTER_ID={encounter_id} AND ID={id}'
-    elif encounter_id is None and id is None:
-        return {'data': []}
-    else:
-        if encounter_id is not None:
-            where_clause = f'ENCOUNTER_ID={encounter_id}'
-        if id is not None:
-            where_clause = f'id={id}'
-
-    data = zip_table(table_name='vitals', where_clause=where_clause)
-    return data
-
-
-# Function to export participant data as a zipped dict
-def zip_table(table_name, where_clause=None):
-    if where_clause is None:
-        where_clause = ""
-
-    if len(where_clause) > 0:
-        where_clause = f' WHERE {where_clause}'
-    with db_connect() as conn:
-        cursor = conn.cursor()
-        select_statement = f'SELECT * FROM {table_name}{where_clause if where_clause else ""}'
-        cursor.execute(select_statement)
-        rows = cursor.fetchall()
-        # Get the column names
-        cursor.execute(f"PRAGMA table_info({table_name})")
-        columns = [column[1] for column in cursor.fetchall()]
-        # Convert the data to a list of dictionaries
-    data_list = []
-    for row in rows:
-        data_dict = dict(zip(columns, row))
-        data_list.append(data_dict)
-    return {'data': data_list}
 
 # *====================================================================*
 #         ROUTES
@@ -363,7 +158,7 @@ def logout():
 @app.route('/')
 @login_required
 def dashboard():
-    conn = db_connect()
+    conn = db.db_connect()
     cursor = conn.cursor()
 
     active_encounters_by_station = {}
@@ -530,17 +325,17 @@ def admin():
 
 # Save DataFrame to SQLite database
 def save_to_database(df, table):
-    with sqlite3.connect(Config.DATABASE_PATH) as conn:
+    with db.db_connect() as conn:
         df.to_sql(table, conn, if_exists='replace', index=False)
 
 # Remove all rows from the table
 def remove_all_rows(table):
-    with sqlite3.connect(Config.DATABASE_PATH) as conn:
+    with sdb.db_connect() as conn:
         conn.execute(f'DELETE FROM {table}')
 
 # Export SQLite table to xlsx file
 def export_to_xlsx(table):
-    with sqlite3.connect(Config.DATABASE_PATH) as conn:
+    with db.db_connect() as conn:
         df = pd.read_sql_query(f'SELECT * FROM {table}', conn)
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
@@ -556,7 +351,7 @@ def export_to_xlsx(table):
 @app.route('/data/participants/', methods=['GET'])
 @login_required
 def data_participants():
-    data = zip_table("persons")
+    data = db.zip_table("persons")
     return jsonify(data)
 
 
@@ -596,14 +391,14 @@ def data_encounters(aid_station=None):
             data_vals = values = list(data.values()) + [id]
 
             query = f"UPDATE encounters SET {data_cols} WHERE id = ?"
-            execute_query(query, data_vals
+            db.execute_query(query, data_vals
                 )
             # query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
             # execute_query(query, data)
 
-            new_data = zip_encounters(id=id)
+            new_data = db.zip_encounters(id=id)
             jnew_data = jsonify(new_data)
-            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
+            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
             send_sio_msg('edit_encounter', jnew_data)
             return jnew_data
 
@@ -611,29 +406,29 @@ def data_encounters(aid_station=None):
         if action.lower() == 'create':
             data_keys = data.keys()
             query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys) })"
-            id = execute_query(query, data)
+            id = db.execute_query(query, data)
 
-            new_data = zip_encounters(id=id)
+            new_data = db.zip_encounters(id=id)
             jnew_data = jsonify(new_data)
-            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'))
+            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'))
             send_sio_msg('new_encounter', jnew_data)
             return jnew_data
 
         # Handle Remove
         if action.lower() == 'remove':
             query = f"UPDATE encounters SET delete_flag=1 WHERE id={id}"
-            execute_query(query)
+            db.execute_query(query)
             
-            new_data = zip_encounters(id=id)
+            new_data = db.zip_encounters(id=id)
             jnew_data = jsonify(new_data)
-            log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
+            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
             send_sio_msg('remove_encounter', jnew_data)
             return jnew_data
 
     # Handle Get Request
     if request.method == "GET":
-        with sqlite3.connect(Config.DATABASE_PATH) as conn:
-            data = zip_encounters(aid_station=aid_station)
+        with db.db_connect() as conn:
+            data = db.zip_encounters(aid_station=aid_station)
         return jsonify(data)
 
     return jsonify("Oh no, you should never be here...")
@@ -686,7 +481,7 @@ def left(message):
 
 
 if __name__ == '__main__':
-    create_database()
+    # create_database()
     socketio.run(app, debug=Config.DEBUG, host=Config.HOST, port=Config.PORT)
 
     
