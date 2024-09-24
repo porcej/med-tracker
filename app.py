@@ -188,7 +188,6 @@ def dashboard():
                           AND ( time_out IS NULL OR time_out="")
                           AND aid_station=?
                           AND delete_flag <> 1
-                          ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['active'] = cursor.fetchone()[0]
 
@@ -198,7 +197,6 @@ def dashboard():
                           AND time_out<>""
                           AND aid_station=?
                           AND delete_flag <> 1
-                          ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['discharged'] = cursor.fetchone()[0]
 
@@ -208,7 +206,6 @@ def dashboard():
                           AND disposition like 'Transport%'
                           AND aid_station=?
                           AND delete_flag <> 1
-                          ORDER BY time_in
                        ''', (aid_station,))
         synopsis['stations'][aid_station]['transported'] = cursor.fetchone()[0]
 
@@ -224,7 +221,6 @@ def dashboard():
                       WHERE time_in IS NOT NULL
                       AND ( time_out IS NULL OR time_out="")
                       AND delete_flag <> 1
-                      ORDER BY time_in
                    ''')
     synopsis['total']['active'] = cursor.fetchone()[0]
 
@@ -233,7 +229,6 @@ def dashboard():
                       WHERE time_out IS NOT NULL
                       AND time_out<>""
                       AND delete_flag != 1
-                      ORDER BY time_in
                    ''')
     synopsis['total']['discharged'] = cursor.fetchone()[0]
 
@@ -243,7 +238,6 @@ def dashboard():
                       WHERE disposition IS NOT NULL
                       AND disposition like 'Transport%'
                       AND delete_flag != 1
-                      ORDER BY time_in
                    ''')
     synopsis['total']['transported'] = cursor.fetchone()[0]
 
