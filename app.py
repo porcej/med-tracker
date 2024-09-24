@@ -119,6 +119,8 @@ db = Db(Config.DATABASE_PATH)
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/auth')
 internal_api_bp = Blueprint('internal_api_bp', __name__, url_prefix='/api/internal')
 chat_bp = Blueprint('chat_bp', __name__, url_prefix='/chat')
+admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
+main_bp = Blueprint('main_bp', __name__)
 
 # *--------------------------------------------------------------------*
 #         Authentication & User Management
@@ -142,7 +144,7 @@ def login():
                     user = Config.USERS[Config.USER_ACCOUNTS[username]['id']]
                     user.set_person(person)
                     login_user(user, remember='y')
-                    return redirect(url_for('dashboard'))
+                    return redirect(url_for('main_bp.dashboard'))
             flash('Invalid username or password', 'error')
             # Redirect the user back to the home
             # (we'll create the home route in a moment)
@@ -160,7 +162,7 @@ def logout():
 # *--------------------------------------------------------------------*
 #         End User Routes (Web Pages)
 # *--------------------------------------------------------------------*
-@app.route('/')
+@main_bp.route('/')
 @login_required
 def dashboard():
     conn = db.db_connect()
@@ -254,7 +256,7 @@ def dashboard():
                            active_page='dashboard')
 
 
-@app.route('/encounters')
+@main_bp.route('/encounters')
 @login_required
 def encounters():
     return render_template('encounters.html',
@@ -285,7 +287,7 @@ def chat():
 #         ADMIN
 # *====================================================================*
 # Route for uploading xlsx file and removing all rows
-@app.route('/admin', methods=['GET', 'POST'])
+@admin_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def admin():
     if not current_user.is_admin:
@@ -440,6 +442,8 @@ def data_encounters(aid_station=None):
 app.register_blueprint(auth_bp)
 app.register_blueprint(internal_api_bp)
 app.register_blueprint(chat_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(main_bp)
 
 # *====================================================================*
 #         SocketIO API
