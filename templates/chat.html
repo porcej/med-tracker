@@ -45,7 +45,7 @@
     <a href="{{ url_for('encounters') }}">Encounters</a> | 
     <span>Chat</span> | 
     {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('auth_bp.logout') }}">Logout</a>
   </div>
   <div class="aid-station-stats">
     <h1> Chatting as {{ current_user.name }}</h1>

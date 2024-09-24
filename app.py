@@ -22,7 +22,7 @@ import pandas as pd
 import re
 import sqlite3
 import sys
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
 from werkzeug.utils import secure_filename
@@ -37,7 +37,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 login_manager = LoginManager()
-login_manager.login_view  = 'login'
+login_manager.login_view  = 'auth_bp.login'
 login_manager.init_app(app)
 
 socketio = SocketIO()
@@ -116,11 +116,11 @@ db = Db(Config.DATABASE_PATH)
 #         ROUTES
 # *====================================================================*
 
-
+auth_bp = Blueprint('auth_bp', __name__, url_prefix='/auth')
 # *--------------------------------------------------------------------*
 #         Authentication & User Management
 # *--------------------------------------------------------------------*
-@app.route("/login", methods=["GET", "POST"])
+@auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     try:
         if current_user.is_authenticated:
@@ -147,11 +147,14 @@ def login():
     except Exception as e:
         flash('An unexpected error occurred.', 'error')
 
-@app.route('/logout')
+@auth_bp.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('login'))
+    return redirect(url_for('auth_bp.login'))
 
+
+
+app.register_blueprint(auth_bp)
 # *--------------------------------------------------------------------*
 #         End User Routes (Web Pages)
 # *--------------------------------------------------------------------*
