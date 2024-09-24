@@ -1,8 +1,9 @@
 // Main / parent / top level Editor
 let encounterTable;
 let openVals;
+
 const encounterEditor = new DataTable.Editor({
-    ajax: './data/encounters'.concat(window.current_aid_station_path),
+    ajax: `./${window.internal_api_base_url}/encounters/${window.current_aid_station_path}`,
     table: '#encounters-table',
     idSrc: 'id',
     fields: [
@@ -329,7 +330,7 @@ const manager_cols = [
 // Encounters DataTable shown in the page
 encounterTable = new DataTable('#encounters-table', {
     idSrc: 'id',
-    ajax: './data/encounters'.concat(window.current_aid_station_path),
+    ajax: `./${window.internal_api_base_url}/encounters/${window.current_aid_station_path}`,
     columns: window.current_user_is_admin ? manager_cols : aid_station_cols,
     layout: {
         topStart: {
@@ -367,7 +368,7 @@ encounterTable = new DataTable('#encounters-table', {
 // Encounters DataTable shown in the page
 let participantsTable = new DataTable('#participants-table', {
     idSrc: 'id',
-    ajax: './data/participants/',
+    ajax: `./${window.internal_api_base_url}/participants/`,
     columns: [
         { data: 'bib' },
         { data: 'first_name' },

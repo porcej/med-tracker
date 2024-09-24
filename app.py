@@ -117,6 +117,8 @@ db = Db(Config.DATABASE_PATH)
 # *====================================================================*
 
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/auth')
+internal_api_bp = Blueprint('internal_api_bp', __name__, url_prefix='/api/internal')
+
 # *--------------------------------------------------------------------*
 #         Authentication & User Management
 # *--------------------------------------------------------------------*
@@ -154,7 +156,6 @@ def logout():
 
 
 
-app.register_blueprint(auth_bp)
 # *--------------------------------------------------------------------*
 #         End User Routes (Web Pages)
 # *--------------------------------------------------------------------*
@@ -255,6 +256,7 @@ def dashboard():
 @login_required
 def encounters():
     return render_template('encounters.html',
+            base_api_path=internal_api_bp.url_prefix, \
             username=current_user.name, \
             aid_stations=Config.AID_STATIONS, \
             is_manager=current_user.is_manager, \
@@ -345,15 +347,15 @@ def export_to_xlsx(table):
 # *====================================================================*
 #         Internal API - available at /data
 # *====================================================================*
-@app.route('/data/participants/', methods=['GET'])
+@internal_api_bp.route('/participants/', methods=['GET'])
 @login_required
 def data_participants():
     data = db.zip_table("persons")
     return jsonify(data)
 
 
-@app.route('/data/encounters', methods=['GET', 'POST'])
-@app.route('/data/encounters/<aid_station>', methods=['GET', 'POST'])
+@internal_api_bp.route('/encounters', methods=['GET', 'POST'])
+@internal_api_bp.route('/encounters/<aid_station>', methods=['GET', 'POST'])
 @login_required
 def data_encounters(aid_station=None):
     if aid_station is not None:
@@ -432,7 +434,8 @@ def data_encounters(aid_station=None):
 
 
 
-
+app.register_blueprint(auth_bp)
+app.register_blueprint(internal_api_bp)
 
 # *====================================================================*
 #         SocketIO API
