@@ -14,13 +14,7 @@
 </head>
 <body>
 <div class="content">
-    <div class="nav">
-        <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
-        <a href="{{ url_for('encounters') }}">Encounters</a> | 
-                <a href="{{ url_for('chat') }}">Chat</a> | 
-        <span>Admin</span> | 
-        <a href="{{ url_for('auth_bp.logout') }}">Logout</a>
-    </div>
+    {% include 'navbar.html' %}
     <div>
         <h1>Registered Participants</h1>
         <form method="POST" enctype="multipart/form-data">

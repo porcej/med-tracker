@@ -34,13 +34,7 @@
 </head>
 <body>
 <div class="content">
-  <div class="nav">
-      <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
-      <span>Encounters</span> | 
-      <a href="{{ url_for('chat') }}">Chat</a> | 
-      {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
-      <a href="{{ url_for('auth_bp.logout') }}">Logout</a>
-  </div>
+  {% include 'navbar.html' %}
   <div class="runners">
     <h1>Registered Participants</h1>
     <table cellpadding="0" cellspacing="0" border="0" class="display" id="participants-table" width="100%">

@@ -9,13 +9,7 @@
 </head>
 <body>
 <div class="content">
-  <div class="nav">
-      <span>Dashboard</span> | 
-      <a href="{{ url_for('encounters') }}">Encounters</a> | 
-      <a href="{{ url_for('chat') }}">Chat</a> | 
-      {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
-      <a href="{{ url_for('auth_bp.logout') }}">Logout</a>
-  </div>
+  {% include 'navbar.html' %}
   <div class="aid-station-stats">
     <h1>{{ current_user.name }}</h1>
   </div>

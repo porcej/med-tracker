@@ -1,0 +1,11 @@
+<nav class="nav">
+    <ul class="navbar">
+        <li>{% if active_page != 'dashboard' %}<a href="{{ url_for('dashboard') }}">{% endif %} Dashboard {% if active_page != 'dashboard' %}</a>{% endif %}</li>
+        <li>{% if active_page != 'encounters' %}<a href="{{ url_for('encounters') }}">{% endif %} Encounters {% if active_page != 'encounters' %}</a>{% endif %}</li>
+        <li>{% if active_page != 'chat' %}<a href="{{ url_for('chat_bp.chat') }}">{% endif %} Chat {% if active_page != 'chat' %}</a>{% endif %}</li>
+        {% if is_admin %}
+            <li>{% if active_page != 'admin' %}<a href="{{ url_for('admin') }}">{% endif %} Admin {% if active_page != 'admin' %}</a>{% endif %}</li>
+        {% endif %}
+        <li><a href="{{ url_for('auth_bp.logout') }}">Logout</a></li>
+    </ul>
+</nav>

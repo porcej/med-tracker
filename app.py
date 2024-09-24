@@ -118,6 +118,7 @@ db = Db(Config.DATABASE_PATH)
 
 auth_bp = Blueprint('auth_bp', __name__, url_prefix='/auth')
 internal_api_bp = Blueprint('internal_api_bp', __name__, url_prefix='/api/internal')
+chat_bp = Blueprint('chat_bp', __name__, url_prefix='/chat')
 
 # *--------------------------------------------------------------------*
 #         Authentication & User Management
@@ -249,7 +250,8 @@ def dashboard():
                            aid_stations=Config.AID_STATIONS, \
                            active_encounters=active_encounters_by_station, \
                            synopsis=synopsis, \
-                           is_admin=current_user.is_admin)
+                           is_admin=current_user.is_admin, \
+                           active_page='dashboard')
 
 
 @app.route('/encounters')
@@ -260,13 +262,14 @@ def encounters():
             username=current_user.name, \
             aid_stations=Config.AID_STATIONS, \
             is_manager=current_user.is_manager, \
-            is_admin=current_user.is_admin)
+            is_admin=current_user.is_admin, \
+            active_page='encounters')
 
 
 # *====================================================================*
 #         Chat
 # *====================================================================*
-@app.route('/chat')
+@chat_bp.route('/')
 def chat():
     """Chat room. The user's name and room must be stored in
     the session."""
@@ -274,7 +277,7 @@ def chat():
     room = 'chat'
     # if name == '' or room == '':
     #     return redirect(url_for('.index'))
-    return render_template('chat.html', name=name, room=room, is_admin=current_user.is_admin)
+    return render_template('chat.html', name=name, room=room, is_admin=current_user.is_admin, active_page='chat')
 
 
 
@@ -320,7 +323,7 @@ def admin():
         else:
             return 'I am not a teapot.'
 
-    return render_template('admin.html')
+    return render_template('admin.html', active_page='admin')
 
 # Save DataFrame to SQLite database
 def save_to_database(df, table):
@@ -436,6 +439,7 @@ def data_encounters(aid_station=None):
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(internal_api_bp)
+app.register_blueprint(chat_bp)
 
 # *====================================================================*
 #         SocketIO API
