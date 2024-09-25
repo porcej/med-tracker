@@ -34,3 +34,4 @@ pytz
 tzdata
 XlsxWriter
 flask-restx
+flask-jwt-extended
