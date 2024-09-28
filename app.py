@@ -22,19 +22,22 @@ import pandas as pd
 import re
 import sqlite3
 import sys
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint, g
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
 from werkzeug.utils import secure_filename
-
+from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from models import Db
+
+from api import api_bp
 
 
 # Initialize the app
 app = Flask(__name__)
 app.config.from_object(Config)
+jwt = JWTManager(app)
 
 login_manager = LoginManager()
 login_manager.login_view  = 'auth_bp.login'
@@ -334,7 +337,7 @@ def save_to_database(df, table):
 
 # Remove all rows from the table
 def remove_all_rows(table):
-    with sdb.db_connect() as conn:
+    with db.db_connect() as conn:
         conn.execute(f'DELETE FROM {table}')
 
 # Export SQLite table to xlsx file
@@ -444,6 +447,7 @@ app.register_blueprint(internal_api_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(main_bp)
+app.register_blueprint(api_bp)
 
 # *====================================================================*
 #         SocketIO API

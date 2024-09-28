@@ -30,6 +30,9 @@ class Db:
             self.make_db_path()
             self.create_database()
 
+    def add_db(self, db_path=None):
+        self._db_path = db_path
+
 
     # *====================================================================*
     #         INITIALIZE DB & DB access
