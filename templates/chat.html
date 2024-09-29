@@ -40,13 +40,7 @@
 </head>
 <body>
 <div class="content">
-  <div class="nav">
-    <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
-    <a href="{{ url_for('encounters') }}">Encounters</a> | 
-    <span>Chat</span> | 
-    {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
-    <a href="{{ url_for('logout') }}">Logout</a>
-  </div>
+    {% include 'navbar.html' %}
   <div class="aid-station-stats">
     <h1> Chatting as {{ current_user.name }}</h1>
   </div>

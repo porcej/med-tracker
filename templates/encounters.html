@@ -7,6 +7,8 @@
     <link href="{{ url_for('static', filename='vend/dt/css/jquery-ui.css') }}" rel="stylesheet" type="text/css">
     <link href="{{ url_for('static', filename='vend/DataTables/datatables.css') }}" rel="stylesheet" type="text/css">
     <script type="text/javascript">
+      window.internal_api_base_url = "{{ base_api_path }}";
+      console.log(window.internal_api_base_url);
       {% if is_manager or is_admin %}
         window.current_user_is_admin = true;
         window.current_aid_station_path = "";
@@ -32,13 +34,7 @@
 </head>
 <body>
 <div class="content">
-  <div class="nav">
-      <a href="{{ url_for('dashboard') }}">Dashboard</a> | 
-      <span>Encounters</span> | 
-      <a href="{{ url_for('chat') }}">Chat</a> | 
-      {% if is_admin %} <a href="{{ url_for('admin') }}">Admin</a> | {% endif %}
-      <a href="{{ url_for('logout') }}">Logout</a>
-  </div>
+  {% include 'navbar.html' %}
   <div class="runners">
     <h1>Registered Participants</h1>
     <table cellpadding="0" cellspacing="0" border="0" class="display" id="participants-table" width="100%">
