@@ -205,3 +205,9 @@ table.active-encounters-aid tbody tr:nth-child(odd) {background-color: #f2f2f2;}
   border-color: #f5c6cb !important;
 }
 
+.multiple-encounters {
+  color: #856404 !important;
+  background-color: #fff3cd !important;
+  border-color: #ffeeba !important;
+}
+
