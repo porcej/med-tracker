@@ -88,15 +88,20 @@ class Db:
                               hospital TEXT,
                               notes TEXT,
                               delete_flag INTEGER DEFAULT 0,
-                              delete_reason TEXT
-
+                              delete_reason TEXT,
+                              critical_flag INTEGER DEFAULT 0
                            )''')
 
             cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='delete_flag' ''')
             if cursor.fetchall()[0][0] == 0:
-                print("Updating encounters table", file=sys.stderr)
+                print("Updating encounters table... adding delete flag", file=sys.stderr)
                 cursor.execute('''ALTER TABLE encounters ADD delete_flag INTEGER DEFAULT 0 ''')
                 cursor.execute('''ALTER TABLE encounters ADD delete_reason TEXT DEFAULT '' ''')
+
+            cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='critical_flag' ''')
+            if cursor.fetchall()[0][0] == 0:
+                print("Updating encounters table... adding critical_flag", file=sys.stderr)
+                cursor.execute('''ALTER TABLE encounters ADD critical_flag INTEGER DEFAULT 0 ''')
 
                 # Encounters Table - Holds a list of all encounters
             cursor.execute('''CREATE TABLE IF NOT EXISTS encounters_audit_log (
