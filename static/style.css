@@ -200,6 +200,8 @@ table.active-encounters-aid tbody tr:nth-child(odd) {background-color: #f2f2f2;}
 }
 
 .critical {
-  color: rgb(255, 255, 255) !important;
-  background-color: #f44336!important;
+  color: #721c24 !important;
+  background-color: #f8d7da !important;
+  border-color: #f5c6cb !important;
 }
+
