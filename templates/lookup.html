@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Encounters Lookup | Med Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="{{ url_for('static', filename='vend/dt/css/jquery-ui.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='vend/DataTables/datatables.css') }}" rel="stylesheet" type="text/css">
+    <script type="text/javascript">
+      window.internal_api_base_url = "{{ base_api_path }}";
+      console.log(window.internal_api_base_url);
+      {% if is_manager or is_admin %}
+        window.current_user_is_admin = true;
+        window.current_aid_station_path = "";
+        window.current_aid_station_options = [
+          {% for aid_station in aid_stations %}
+            { label:'{{ aid_station }}', value: '{{ aid_station }}' },
+          {% endfor %}
+        ];
+      {% else %}
+        window.current_user_is_admin = false;
+        const username = '{{username}}';
+        window.current_aid_station_path = `/${username.replace(/ /g,'_').replace(/\//g,'--')}`; 
+
+        window.current_aid_station_options = [{ label:'{{username}}', value:'{{username}}' }];
+      {% endif %}
+    </script>
+    <script src="{{ url_for('static', filename='vend/moment/moment.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/DataTables/datatables.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/socket.io/4.4.1/socket.io.min.js')}}"></script>
+
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="content">
+  {% include 'navbar.html' %}
+  <div class="aid-station-encounters">
+    <h1>Encounters</h1>
+    <table cellpadding="0" cellspacing="0" border="0" class="display" id="encounters-table" width="100%">
+      <thead>
+        <tr>
+        {% if is_manager or is_admin %}
+          <th>Bib # or ID</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Gender</th>
+          <th>Race Participant</th>
+          <th>Active Duty</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Primary Complaint</th>
+          <th>Disposition</th>
+          <th>Aid Staton</th>
+        {% else %}
+          <th>Bib # or ID</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Primary Complaint</th>
+          <th>Disposition</th>
+          <th>Critical</th>
+          <th>Aid Staton</th>
+        {% endif %}
+        </tr>
+      </thead>
+    </table>
+    <div class="critical">Indicates critical patient</div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/mt-look.js') }}"></script>
+</body>
+</html>

@@ -270,6 +270,17 @@ def encounters():
             is_admin=current_user.is_admin, \
             active_page='encounters')
 
+@main_bp.route('/lookup')
+@login_required
+def lookup():
+    return render_template('lookup.html',
+            base_api_path=internal_api_bp.url_prefix, \
+            username=current_user.name, \
+            aid_stations=Config.AID_STATIONS, \
+            is_manager=current_user.is_manager, \
+            is_admin=current_user.is_admin, \
+            active_page='lookup')
+
 
 # *====================================================================*
 #         Chat

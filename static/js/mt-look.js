@@ -313,6 +313,14 @@ const aid_station_cols = [
     { data: 'time_out', },
     { data: 'presentation', },
     { data: 'disposition' },
+    { 
+        data: 'critical_flag',
+        render: (data, type, row) =>
+            type === 'display'
+                ? '<input type="checkbox" class="editor-critical table-checkbox">'
+                : data,
+        className: 'dt-body-center'
+    },
     { data: 'aid_station' }
 ];
 
@@ -341,6 +349,14 @@ const manager_cols = [
     { data: 'time_out', },
     { data: 'presentation', },
     { data: 'disposition' },
+    { 
+        data: 'critical_flag',
+        render: (data, type, row) =>
+            type === 'display'
+                ? '<input type="checkbox" class="editor-critical table-checkbox">'
+                : data,
+        className: 'dt-body-center'
+    },
     { data: 'aid_station' }
 ];
 
@@ -377,6 +393,7 @@ encounterTable = new DataTable('#encounters-table', {
             // Set the checked state of the checkbox in the table
             row.querySelector('input.editor-participant').checked = data.participant == 1;
             row.querySelector('input.editor-active-duty').checked = data.active_duty == 1;
+            row.querySelector('input.editor-critical').checked = data.critical_flag == 1;
             if (data.critical_flag == 1) {
                 $(row).addClass('critical');
             } else {
