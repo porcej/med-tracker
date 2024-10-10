@@ -35,6 +35,16 @@ const encounterEditor = new DataTable.Editor({
             ]
         },
         {
+            label: 'Critical Patient',
+            name: 'critical_flag',
+            type: 'checkbox',
+            separator: '|',
+            options: [{ label: '', value: 1}],
+            unselectedValue: 0,
+            def: 0,
+            fieldInfo: 'Check this box if the patient is critical (Heat Stroke, Cardiac Arrest, 3>Encounters).'
+        },
+        {
             label: 'Race Participant',
             name: 'participant',
             type: 'checkbox',
@@ -251,6 +261,13 @@ const encounterEditor = new DataTable.Editor({
         }        
     ]
 });
+encounterEditor.dependent('presentation', function(val) {
+    if (val === 'Heat Stroke'){
+        encounterEditor.field('critical_flag').val(1);
+    }
+    return {};
+});
+
 encounterEditor
     .on('open', function() {
     // openVals = JSON.stringify(encounterEditor.get());
@@ -360,6 +377,13 @@ encounterTable = new DataTable('#encounters-table', {
             // Set the checked state of the checkbox in the table
             row.querySelector('input.editor-participant').checked = data.participant == 1;
             row.querySelector('input.editor-active-duty').checked = data.active_duty == 1;
+            console.log(`Critical Flag: ${data.critical_flag}`);
+            console.log('Data', data);
+            if (data.critical_flag == 1) {
+                $(row).addClass('critical');
+            } else {
+                $(row).removeClass('critical');
+            }
         }
     }
 

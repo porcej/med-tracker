@@ -198,3 +198,16 @@ table.active-encounters-aid tbody tr:nth-child(odd) {background-color: #f2f2f2;}
 .navbar li a:hover {
     text-decoration: underline; /* Underline links on hover */
 }
+
+.critical {
+  color: #721c24 !important;
+  background-color: #f8d7da !important;
+  border-color: #f5c6cb !important;
+}
+
+.multiple-encounters {
+  color: #856404 !important;
+  background-color: #fff3cd !important;
+  border-color: #ffeeba !important;
+}
+
