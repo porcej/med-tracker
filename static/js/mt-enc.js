@@ -377,12 +377,12 @@ encounterTable = new DataTable('#encounters-table', {
             // Set the checked state of the checkbox in the table
             row.querySelector('input.editor-participant').checked = data.participant == 1;
             row.querySelector('input.editor-active-duty').checked = data.active_duty == 1;
+        }
             if (data.critical_flag == 1) {
                 $(row).addClass('critical');
             } else {
                 $(row).removeClass('critical');
             }
-        }
     }
 
 });
