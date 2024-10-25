@@ -191,11 +191,11 @@ class Db:
     # Function to log server sync
     def log_sync(self, username, aid_station, data, sync_status, created_at):
         table_name = 'sync_log'
-        query = f"INSERT INTO {table_name} (username, aid_station, data, sync, created_at) VALUE ({username}, {aid_station}, {data}, {sync_status}, {created_at})"
+        query = f"INSERT INTO {table_name} (username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?)"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query)
+                cursor.execute(query, (username, aid_station, data, sync_status, created_at))
                 conn.commit()
         except sqlite3.Error as e:
             print(f"Database error creating sync_log {query}: {e}", file=sys.stderr)
