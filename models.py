@@ -176,14 +176,76 @@ class Db:
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                            )''')
 
+            cursor.execute('''CREATE TABLE IF NOT EXISTS sync_log (
+                              id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              username TEXT NOT NULL DEFAULT 'API',
+                              aid_station TEXT,
+                              data TEXT,
+                              synced INTEGER DEFAULT 0,
+                              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                           )''')
+
             print("Database created!", file=sys.stderr)
             conn.commit()
+
+    # Function to log server sync
+    def log_sync(self, username, aid_station, data, sync_status, created_at):
+        table_name = 'sync_log'
+        query = f"INSERT INTO {table_name} (username, aid_station, data, sync, created_at) VALUE ({username}, {aid_station}, {data}, {sync_status}, {created_at})"
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error creating sync_log {query}: {e}", file=sys.stderr)
+            return None
+
+    # Function to update sync status
+    def update_sync_status(self, log_id, sync_status):
+        table_name = 'sync_log'
+        query = f"UPDATE {table_name} SET synced {sync_status} WHERE id = {log_id}"
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f"Database error updating sync status {query}: {e}", file=sys.stderr)
+            return None
+
+    # Function to return all chat messages in a chatroom
+    def get_sync_message(self, unsynced_only=True):
+        table_name = 'sync_log'
+
+        if unsynced_only:
+            query = f"SELECT * FROM {table_name} WHERE synced = 0 ORDER BY created_at"
+        else:
+            query = f"SELECT * FROM {table_name} ORDER BY created_at"
+
+        try:
+            
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (room,))
+                rows = cursor.fetchall()
+                # Get the column names
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = [column[1] for column in cursor.fetchall()]
+                data_list = []
+            for row in rows:
+                data_dict = dict(zip(columns, row))
+                data_list.append(data_dict)
+            return data_list
+        except sqlite3.Error as e:
+            print(f"Database error reading messages for {room}: {e}", file=sys.stderr)
+            return None
 
     # Function to return all chat messages in a chatroom
     def get_chat_messages(self, room):
         table_name = 'chat_messages'
         try:
-            query = f"SELECT * FROM chat_messages WHERE room = ? ORDER BY created_at"
+            query = f"SELECT * FROM {table_name} WHERE room = ? ORDER BY created_at"
             with self.db_connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query, (room,))
