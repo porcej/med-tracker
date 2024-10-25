@@ -237,7 +237,7 @@ class Db:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                query = f"INSERT INTO encounters_audit_log (action, record_id, timestamp, user_id,  resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
+                query = f"INSERT INTO encounters_audit_log (action, record_id, user_id, timestamp, resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
                 cursor.execute(query)
                 conn.commit()
         except sqlite3.Error as e:
