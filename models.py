@@ -167,7 +167,13 @@ class Db:
                               name TEXT NOT NULL
                            )''')
 
-
+            cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
+                              id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              room TEXT NOT NULL,
+                              username TEXT NOT NULL,
+                              content TEXT NOT NULL DEFAULT ' ',
+                              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                           )''')
 
             print("Database created!", file=sys.stderr)
             conn.commit()
