@@ -338,7 +338,7 @@ def admin():
         else:
             return 'I am not a teapot.'
 
-    return render_template('admin.html', active_page='admin')
+    return render_template('admin.html', is_admin=current_user.is_admin, active_page='admin')
 
 # Save DataFrame to SQLite database
 def save_to_database(df, table):
@@ -525,12 +525,24 @@ def handle_send_message(data):
 
     emit('receive_message', message, room=room)
 
-# @socketio.on('disconnect', namespace='/chat')
-# def handle_disconnect(data):
-#     room = data['room']
-#     leave_room(room)
+@socketio.on('send_message_public', namespace='/chat')
+def handle_send_message_public(data):
+    room = data['room']
+    assignment = data['assignment']
+    username =  data['username']
+    content = data['message']
+    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+    db.add_chat_message(room=room, assignment=assignment, username=username, content=content, created_at=created_at)
+    message = {
+        "assignment": assignment,
+        "username": username,
+        "content": content,
+        "created_at": created_at
+    }
+
+    emit('receive_message', message, room=room)
 
 if __name__ == '__main__':
     # create_database()
