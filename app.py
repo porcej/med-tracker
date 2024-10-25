@@ -17,6 +17,7 @@ __license__ = "MIT"
 
 from config import Config
 from io import BytesIO
+import json
 import os
 import pandas as pd
 import re
@@ -388,6 +389,12 @@ def data_encounters(aid_station=None):
 
         action = request.form['action']
 
+        # Save for syncing
+        # sync_data = jsonify()
+        from pprint import pprint
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=json.dumps(request.form), sync_status=0, created_at=created_at)
+
         pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
         data = {}
         id = 0
@@ -408,8 +415,7 @@ def data_encounters(aid_station=None):
             data_vals = values = list(data.values()) + [id]
 
             query = f"UPDATE encounters SET {data_cols} WHERE id = ?"
-            db.execute_query(query, data_vals
-                )
+            db.execute_query(query, data_vals)
             # query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
             # execute_query(query, data)
 
