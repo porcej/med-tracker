@@ -170,6 +170,7 @@ class Db:
             cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
                               room TEXT NOT NULL,
+                              assignment TEXT NOT NULL,
                               username TEXT NOT NULL,
                               content TEXT NOT NULL DEFAULT ' ',
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -177,6 +178,40 @@ class Db:
 
             print("Database created!", file=sys.stderr)
             conn.commit()
+
+    # Function to return all chat messages in a chatroom
+    def get_chat_messages(self, room):
+        table_name = 'chat_messages'
+        try:
+            query = f"SELECT * FROM chat_messages WHERE room = ? ORDER BY created_at"
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (room,))
+                rows = cursor.fetchall()
+                # Get the column names
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = [column[1] for column in cursor.fetchall()]
+                data_list = []
+            for row in rows:
+                data_dict = dict(zip(columns, row))
+                data_list.append(data_dict)
+            return data_list
+        except sqlite3.Error as e:
+            print(f"Database error reading messages for {room}: {e}", file=sys.stderr)
+            return None
+
+    # Adds a chat message to the db
+    def add_chat_message(self, room, assignment, username, content, created_at):
+        query = f"INSERT INTO chat_messages (room, assignment, username, content, created_at) VALUES ('{room}', '{assignment}', '{username}', '{content}', '{created_at}')"
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+
+        except sqlite3.Error as e:
+            print(f"Database error executing query {query}: {e}", file=sys.stderr)
+            return None
 
     # Function to execute query and return the last row ID after executing seaid query
     def execute_query(self, query, values=None):
