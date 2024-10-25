@@ -26,6 +26,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
 from werkzeug.utils import secure_filename
+from datetime import datetime
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
@@ -44,7 +45,7 @@ login_manager.login_view  = 'auth_bp.login'
 login_manager.init_app(app)
 
 socketio = SocketIO()
-socketio.init_app(app)
+socketio.init_app(app, cors_allowed_origins="*")
 
 # Setup some user stuff here
 class User(UserMixin):
@@ -289,11 +290,9 @@ def lookup():
 def chat():
     """Chat room. The user's name and room must be stored in
     the session."""
-    name = current_user.name
-    room = 'chat'
-    # if name == '' or room == '':
-    #     return redirect(url_for('.index'))
-    return render_template('chat.html', name=name, room=room, is_admin=current_user.is_admin, active_page='chat')
+    assignment = current_user.name
+    username = current_user.get_person()
+    return render_template('chat.html', assignment=assignment, username=username, is_admin=current_user.is_admin, active_page='chat')
 
 
 
@@ -339,7 +338,7 @@ def admin():
         else:
             return 'I am not a teapot.'
 
-    return render_template('admin.html', active_page='admin')
+    return render_template('admin.html', is_admin=current_user.is_admin, active_page='admin')
 
 # Save DataFrame to SQLite database
 def save_to_database(df, table):
@@ -475,33 +474,75 @@ def send_sio_msg(msg_type, msg, room=None):
 # *====================================================================*
 #         SocketIO Chat
 # *====================================================================*
-@socketio.on('joined', namespace='/chat')
-def joined(message):
-    """Sent by clients when they enter a room.
-    A status message is broadcast to all people in the room."""
-    room = 'chat'
+# @socketio.on('joined', namespace='/chat')
+# def joined(message):
+#     """Sent by clients when they enter a room.
+#     A status message is broadcast to all people in the room."""
+#     room = 'chat'
+#     join_room(room)
+#     emit('status', {'msg': current_user.name + ' has entered the room.'}, room=room)
+
+
+# @socketio.on('text', namespace='/chat')
+# def text(message):
+#     """Sent by a client when the user entered a new message.
+#     The message is sent to all people in the room."""
+#     room = 'chat'
+#     emit('message', {'msg': current_user.name + ':' + message['msg']}, room=room)
+
+
+# @socketio.on('left', namespace='/chat')
+# def left(message):
+#     """Sent by clients when they leave a room.
+#     A status message is broadcast to all people in the room."""
+#     room = 'chat'
+#     leave_room(room)
+#     emit('status', {'msg': current_user.name + ' has left the room.'}, room=room)
+
+@socketio.on('join', namespace='/chat')
+def handle_join(data):
+    room = data['room']
     join_room(room)
-    emit('status', {'msg': current_user.name + ' has entered the room.'}, room=room)
+    previous_messages = db.get_chat_messages(room)
+    emit('previous_messages', previous_messages, room=request.sid)
+
+@socketio.on('send_message', namespace='/chat')
+def handle_send_message(data):
+    room = data['room']
+    assignment = current_user.name
+    username = current_user.get_person()
+    content = data['message']
+    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-@socketio.on('text', namespace='/chat')
-def text(message):
-    """Sent by a client when the user entered a new message.
-    The message is sent to all people in the room."""
-    room = 'chat'
-    emit('message', {'msg': current_user.name + ':' + message['msg']}, room=room)
+    db.add_chat_message(room=room, assignment=assignment, username=username, content=content, created_at=created_at)
+    message = {
+        "assignment": assignment,
+        "username": username,
+        "content": content,
+        "created_at": created_at
+    }
+
+    emit('receive_message', message, room=room)
+
+@socketio.on('send_message_public', namespace='/chat')
+def handle_send_message_public(data):
+    room = data['room']
+    assignment = data['assignment']
+    username =  data['username']
+    content = data['message']
+    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-@socketio.on('left', namespace='/chat')
-def left(message):
-    """Sent by clients when they leave a room.
-    A status message is broadcast to all people in the room."""
-    room = 'chat'
-    leave_room(room)
-    emit('status', {'msg': current_user.name + ' has left the room.'}, room=room)
+    db.add_chat_message(room=room, assignment=assignment, username=username, content=content, created_at=created_at)
+    message = {
+        "assignment": assignment,
+        "username": username,
+        "content": content,
+        "created_at": created_at
+    }
 
-
-
+    emit('receive_message', message, room=room)
 
 if __name__ == '__main__':
     # create_database()

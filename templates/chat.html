@@ -3,51 +3,40 @@
 <head>
     <title>Chat | Med Tracking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" type="text/css">
+    <link href="{{ url_for('static', filename='css/chat.css') }}" rel="stylesheet" type="text/css">
     <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ url_for('static', filename='vend/socket.io/4.4.1/socket.io.min.js')}}"></script>
-            <script type="text/javascript" charset="utf-8">
-            var socket;
-            $(document).ready(function(){
-                socket = io.connect('//' + document.domain + ':' + location.port + '/chat');
-                socket.on('connect', function() {
-                    socket.emit('joined', {});
-                });
-                socket.on('status', function(data) {
-                    $('#chat').val($('#chat').val() + '<' + data.msg + '>\n');
-                    $('#chat').scrollTop($('#chat')[0].scrollHeight);
-                });
-                socket.on('message', function(data) {
-                    $('#chat').val($('#chat').val() + data.msg + '\n');
-                    $('#chat').scrollTop($('#chat')[0].scrollHeight);
-                });
-                $('#text').keypress(function(e) {
-                    var code = e.keyCode || e.which;
-                    if (code == 13) {
-                        text = $('#text').val();
-                        $('#text').val('');
-                        socket.emit('text', {msg: text});
-                    }
-                });
-            });
-            function leave_room() {
-                socket.emit('left', {}, function() {
-                    socket.disconnect();
-                    // go back to the login page
-                });
-            }
-        </script>
 </head>
 <body>
 <div class="content">
     {% include 'navbar.html' %}
   <div class="aid-station-stats">
-    <h1> Chatting as {{ current_user.name }}</h1>
+    <h2>Chatting as <strong>{{ assignment }}</strong> ({{username}})</h2>
+    <label for="room-select">Select Chat Room:</label>
+    <select id="room-select">
+        <option value="Medical">Medical</option>
+        <option value="AREDN">AREDN</option>
+        <option value="Log">Log</option>
+    </select>
   </div>
   <div class="chat-container">
-    <textarea id="chat" cols="80" rows="20"></textarea><br><br>
-    <input id="text" size="80" placeholder="Enter your message here"><br><br>
+    <div id="chat-box"></div>
+    <form id="message-form">
+        <input type="text" id="message" placeholder="Enter your message">
+        <button type="submit">Send</button>
+    </form>
   </div>
-</div>
+  <script>
+    var assignment = "{{ assignment }}";
+    var username = "{{ username }}";
+    if (!localStorage.getItem('currentRoom')) {
+      localStorage.setItem('currentRoom', 'Medical'); // default room
+    }
+    var currentRoom = localStorage.getItem('currentRoom');
+    // Set the dropdown to the current room
+    document.getElementById('room-select').value = currentRoom;
+  </script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </body>
 </html>
