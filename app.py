@@ -578,11 +578,11 @@ def connect_to_remote_server():
 
 @remote_sio.event(namespace="/sync")
 def connect():
-    msg = {
+    data = {
         'key': Config.UPSTREAM_KEY,
         'room': encounters
     }
-    remote_sio.emit('join', msg, namespace="/sync")
+    remote_sio.emit('join', data, namespace="/sync")
 
 @remote_sio.event(namespace="/sync")
 def disconnect():
