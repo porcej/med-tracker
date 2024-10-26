@@ -568,7 +568,8 @@ def notify_sync_new_record(room='encounters'):
 
     if len(previous_encounters) > 0:
         if sync_mode == 'client':
-            remote_sio.emit(message_type, previous_encounters, namespace=namespace)
+            if remote_sio.connected:
+                remote_sio.emit(message_type, previous_encounters, namespace=namespace)
         elif sync_mode == 'server':
             emit(message_type, previous_encounters, room=room, namespace=namespace)
             previous_encounters = db.get_sync_message()
@@ -585,7 +586,8 @@ def add_sync_transaction(encounter):
         handle_encounters(payload=data, username=username)
     
     if sync_mode == 'client':
-        remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
+        if remote_sio.connected:
+            remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
     else:
         emit("encounter_sync_confirmation", {'id': log_sync_id}, room="encounters", namespace="/sync")
 
@@ -606,7 +608,16 @@ def handle_sync_join(data):
         join_room(room)
         notify_sync_new_record(room=request.sid)
 
+# Handle a request to sync multiple encounters
+@socketio.on('sync_encounter', namespace='/sync')
+def handle_sync_encounters(data):
+    if Config.SYNC_ENABLED:
+        add_sync_transaction(data)
 
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@socketio.on('encounter_sync_confirmation', namespace='/sync')
+def handle_sync_confirmation(data):
+    db.update_sync_status(log_id=data['id'], sync_status=2)
 # *====================================================================*
 #         SocketIO Server Sync Client
 # *====================================================================*
@@ -646,12 +657,6 @@ def handle_sync_encounters(data):
     if Config.SYNC_ENABLED:
         for encounter in data:
             add_sync_transaction(encounter)
-
-# Handle a request to sync multiple encounters
-@remote_sio.on('sync_encounter', namespace='/sync')
-def handle_sync_encounters(data):
-    if Config.SYNC_ENABLED:
-        add_sync_transaction(data)
 
 if sync_mode == 'client':
     # Connect initially to the remote server in a separate thread
