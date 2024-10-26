@@ -408,7 +408,7 @@ def handle_encounters(action, payload, username):
             db.execute_query(query, data_vals)
 
             new_data = db.zip_encounters(uuid=uuid)
-            jnew_data = jsonify(new_data)
+            jnew_data = json.dumps(new_data)
             db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=current_user.user_stamp(), resultant_value=jnew_data)
             # send_sio_msg('edit_encounter', jnew_data)
             send_sio_msg('edit_encounter', new_data)
@@ -423,8 +423,8 @@ def handle_encounters(action, payload, username):
             id = db.execute_query(query, data)
 
             new_data = db.zip_encounters(uuid=uuid)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'), uuid=uuid)
+            jnew_data = json.dumps(new_data)
+            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data, uuid=uuid)
             send_sio_msg('new_encounter', jnew_data)
             return new_data
 
@@ -433,8 +433,8 @@ def handle_encounters(action, payload, username):
             query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
             db.execute_query(query)
             
-            new_data = db.zip_encounters(uuid=uuid)
-            jnew_data = jsonify(new_data)
+            new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
+            jnew_data = json.dumps(new_data)
             db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data, uuid=uuid)
             send_sio_msg('remove_encounter', jnew_data)
             return new_data

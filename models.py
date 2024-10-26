@@ -307,11 +307,12 @@ class Db:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                query = f"INSERT INTO encounters_audit_log (action, uuid, user_id, timestamp, resultant_value, ) VALUES ('{action}', '{uuid}', '{user_id}', '{timestamp}', '{resultant_value}' )"
-                cursor.execute(query)
+                query = f"INSERT INTO encounters_audit_log (action, uuid, user_id, timestamp, resultant_value) VALUES (?, ?, ?, ?, ?)"
+                values = (action, uuid, user_id, timestamp, resultant_value)
+                cursor.execute(query, values)
                 conn.commit()
         except sqlite3.Error as e:
-            print(f"Database error writing audit log: {e}", file=sys.stderr)
+            print(f"Database error writing audit log -{query}: {e}", file=sys.stderr)
 
     # Function to export data as a zipped dict
     def zip_encounters(self, id=None, uuid=None, aid_station=None, include_deleted=False, only_deleted=False):
