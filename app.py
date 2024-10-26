@@ -439,7 +439,6 @@ def transact_edit(user, data, uuid):
     data_vals = list(data.values())
 
     query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
-    print(query)
     db.execute_query(query, data_vals)
     new_data = db.zip_encounters(uuid=uuid)
     send_sio_msg('edit_encounter', new_data)
@@ -590,8 +589,6 @@ def notify_sync_new_record(room='encounters'):
 
     previous_encounters = db.get_sync_transactions()
 
-    # print(json.dumps(previous_encounters, indent=8))
-    # print("^"*100)
     if len(previous_encounters) > 0:
         if sync_mode == 'client':
             if remote_sio.connected:
@@ -640,7 +637,6 @@ def handle_sync_encounters(data):
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @socketio.on('encounter_sync_confirmation', namespace='/sync')
 def handle_sync_confirmation(data):
-    print(json.dumps(data, indent=4))
     db.update_sync_status(log_id=data['id'], sync_status=2)
 # *====================================================================*
 #         SocketIO Server Sync Client
@@ -681,7 +677,6 @@ def remote_handle_sync_encounters(data):
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @remote_sio.on('encounter_sync_confirmation', namespace='/sync')
 def remote_handle_sync_confirmation(data):
-    print(f'Encounter Confirmation {json.dumps(data, indent=4)}')
     db.update_sync_status(log_id=data['id'], sync_status=2)
 
 if sync_mode == 'client':
