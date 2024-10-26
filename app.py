@@ -591,11 +591,6 @@ def add_sync_transaction(encounter):
     else:
         emit("encounter_sync_confirmation", {'id': log_sync_id}, room="encounters", namespace="/sync")
 
-# Handle Encounter Sync Confirmation (set sync_status 2)
-@socketio.on('encounter_sync_confirmation', namespace='/sync')
-def handle_sync_confirmation(data):
-    db.update_sync_status(log_id=data['id'], sync_status=2)
-
 
 # *====================================================================*
 #         SocketIO Server Sync Server
@@ -612,7 +607,8 @@ def handle_sync_join(data):
 @socketio.on('sync_encounter', namespace='/sync')
 def handle_sync_encounters(data):
     if Config.SYNC_ENABLED:
-        add_sync_transaction(data)
+        for encounter in data:
+            add_sync_transaction(encounter)
 
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @socketio.on('encounter_sync_confirmation', namespace='/sync')
@@ -639,6 +635,7 @@ def connect():
         'room': 'encounters'
     }
     remote_sio.emit('join', data, namespace="/sync")
+    notify_sync_new_record()
 
 @remote_sio.event(namespace="/sync")
 def disconnect():
@@ -646,17 +643,17 @@ def disconnect():
     # Start reconnection attempts in a separate thread
     threading.Thread(target=connect_to_remote_server, daemon=True).start()
 
-# Handle Encounter Sync Confirmation (set sync_status 2)
-@remote_sio.on('encounter_sync_confirmation', namespace='/sync')
-def handle_sync_confirmation(id):
-    db.update_sync_status(log_id=id, sync_status=2)
-
 # Handle a request to sync multiple encounters
 @remote_sio.on('sync_encounters', namespace='/sync')
-def handle_sync_encounters(data):
+def remote_handle_sync_encounters(data):
     if Config.SYNC_ENABLED:
         for encounter in data:
             add_sync_transaction(encounter)
+
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@remote_sio.on('encounter_sync_confirmation', namespace='/sync')
+def remote_handle_sync_confirmation(id):
+    db.update_sync_status(log_id=id, sync_status=2)
 
 if sync_mode == 'client':
     # Connect initially to the remote server in a separate thread
