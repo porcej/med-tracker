@@ -392,7 +392,7 @@ def handle_encounters(action, payload, username):
         print(f'UUID: {uuid}')  
 
          # Handle Editing an existing record
-        if action.lower() == 'edit':
+        if action == 'edit':
             # data_keys = data.keys()
 
             data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
@@ -409,7 +409,7 @@ def handle_encounters(action, payload, username):
             return new_data
 
         # Handle Creating a new record
-        if action.lower() == 'create':
+        if action == 'create':
             uuid = str(uuid4())
             data['uuid'] = uuid
             data_keys = data.keys()
@@ -423,7 +423,7 @@ def handle_encounters(action, payload, username):
             return new_data
 
         # Handle Remove
-        if action.lower() == 'remove':
+        if action  == 'remove':
             query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
             db.execute_query(query)
             
@@ -444,19 +444,24 @@ def data_encounters(aid_station=None):
         aid_station = aid_station.replace("--", "/")
 
     if request.method == 'POST':
-        
+        known_actions = ['create', 'edit', 'remove']
+
         # Validate the post request
         if 'action' not in request.form:
-            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
+            e_msg = "Encounter post submitted without action."
+            print(e_msg, file=sys.stderr)
+            return jsonify({ 'error': e_msg})
 
-        action = request.form['action']
+        action = request.form['action'].lower()
+        if action not in known_actions:
+            e_msg = f"Encounter post submitted with unknown action {action}."
+            print(e_msg, file=sys.stderr)
+            return jsonify({ 'error': e_msg})
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=json.dumps(request.form), sync_status=0, created_at=created_at)
         data = handle_encounters(action=action, payload=request.form, username=current_user.user_stamp())
         return jsonify( data )
-
-
-
        
     # Handle Get Request
     if request.method == "GET":
