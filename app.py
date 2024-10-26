@@ -392,13 +392,16 @@ def handle_encounters(payload, username):
         query = ""
         known_actions = ['create', 'edit', 'remove']
 
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+
         # Validate the post request
-        if 'action' not in request.form:
+        if 'action' not in payload:
             e_msg = "Encounter post submitted without action."
             print(e_msg, file=sys.stderr)
             return { 'error': e_msg}
 
-        action = request.form['action'].lower()
+        action = payload['action'].lower()
         if action not in known_actions:
             e_msg = f"Encounter post submitted with unknown action {action}."
             print(e_msg, file=sys.stderr)
