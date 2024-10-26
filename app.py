@@ -580,7 +580,7 @@ def connect_to_remote_server():
 def connect():
     data = {
         'key': Config.UPSTREAM_KEY,
-        'room': encounters
+        'room': 'encounters'
     }
     remote_sio.emit('join', data, namespace="/sync")
 
