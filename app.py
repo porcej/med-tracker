@@ -425,7 +425,7 @@ def handle_encounters(payload, username):
 
             new_data = db.zip_encounters(uuid=uuid)
             jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=current_user.user_stamp(), resultant_value=jnew_data)
+            db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=username, resultant_value=jnew_data)
             # send_sio_msg('edit_encounter', jnew_data)
             send_sio_msg('edit_encounter', new_data)
             return new_data
@@ -440,7 +440,7 @@ def handle_encounters(payload, username):
 
             new_data = db.zip_encounters(uuid=uuid)
             jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data, uuid=uuid)
+            db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
             send_sio_msg('new_encounter', jnew_data)
             return new_data
 
@@ -451,7 +451,7 @@ def handle_encounters(payload, username):
             
             new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
             jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data, uuid=uuid)
+            db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
             send_sio_msg('remove_encounter', jnew_data)
             return new_data
 
@@ -560,11 +560,17 @@ def add_sync_transaction(encounter):
     created_at = encounter['created_at']
 
     handle_encounters(payload=data, username=username)
-    log_sync_id = db.log_sync(username=username, aid_station=None, data=json.dumps(request.form), sync_status=2, created_at=created_at)
+    log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at)
+    print(f'LOG SYNC ID: {log_sync_id}')
     if sync_mode == 'client':
-        remote_sio.emit("encounter_sync_confirmation", log_sync_id, room="encounters", namespace="/sync")
+        remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
     else:
-        emit("encounter_sync_confirmation", log_sync_id, room="encounters", namespace="/sync")
+        emit("encounter_sync_confirmation", {'id': log_sync_id}, room="encounters", namespace="/sync")
+
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@socketio.on('encounter_sync_confirmation', namespace='/sync')
+def handle_sync_confirmation(data):
+    db.update_sync_status(log_id=data['id'], sync_status=2)
 
 
 # *====================================================================*
