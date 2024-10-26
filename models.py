@@ -234,10 +234,7 @@ class Db:
     # Function to update sync status
     def update_sync_status(self, log_id, sync_status):
         table_name = 'sync_log'
-        if isinstance(log_id, str):
-            query = f"UPDATE {table_name} SET synced = {sync_status} WHERE uuid = '{log_id}'"
-        else:
-            query = f"UPDATE {table_name} SET synced = {sync_status} WHERE id = log_id"
+        query = f"UPDATE {table_name} SET synced = {sync_status} WHERE uuid = '{log_id}'"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()

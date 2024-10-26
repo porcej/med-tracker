@@ -562,11 +562,12 @@ def notify_sync_new_record(room='encounters'):
 
     previous_encounters = db.get_sync_message()
 
-    if sync_mode == 'client':
-        remote_sio.emit(message_type, previous_encounters, namespace=namespace)
-    elif sync_mode == 'server':
-        emit(message_type, previous_encounters, room=room, namespace=namespace)
-        previous_encounters = db.get_sync_message()
+    if len(previous_encounters) > 0:
+        if sync_mode == 'client':
+            remote_sio.emit(message_type, previous_encounters, namespace=namespace)
+        elif sync_mode == 'server':
+            emit(message_type, previous_encounters, room=room, namespace=namespace)
+            previous_encounters = db.get_sync_message()
 
 # Add a transaction from a remote host
 def add_sync_transaction(encounter):
@@ -575,8 +576,9 @@ def add_sync_transaction(encounter):
     created_at = encounter['created_at']
     uuid = encounter['uuid']
 
-    handle_encounters(payload=data, username=username)
     log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at, uuid=uuid)
+    if log_sync_id is not None:
+        handle_encounters(payload=data, username=username)
     
     if sync_mode == 'client':
         remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
