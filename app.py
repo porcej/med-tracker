@@ -385,11 +385,24 @@ def data_participants():
     return jsonify(data)
 
 
-def handle_encounters(action, payload, username):
+def handle_encounters(payload, username):
         pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
         data = {}
         uuid = ""
         query = ""
+        known_actions = ['create', 'edit', 'remove']
+
+        # Validate the post request
+        if 'action' not in request.form:
+            e_msg = "Encounter post submitted without action."
+            print(e_msg, file=sys.stderr)
+            return { 'error': e_msg}
+
+        action = request.form['action'].lower()
+        if action not in known_actions:
+            e_msg = f"Encounter post submitted with unknown action {action}."
+            print(e_msg, file=sys.stderr)
+            return { 'error': e_msg}
 
         for key in payload.keys():
             tokens = re.findall(r'\[(.*?)\]', key)
@@ -450,23 +463,10 @@ def data_encounters(aid_station=None):
         aid_station = aid_station.replace("--", "/")
 
     if request.method == 'POST':
-        known_actions = ['create', 'edit', 'remove']
-
-        # Validate the post request
-        if 'action' not in request.form:
-            e_msg = "Encounter post submitted without action."
-            print(e_msg, file=sys.stderr)
-            return jsonify({ 'error': e_msg})
-
-        action = request.form['action'].lower()
-        if action not in known_actions:
-            e_msg = f"Encounter post submitted with unknown action {action}."
-            print(e_msg, file=sys.stderr)
-            return jsonify({ 'error': e_msg})
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=json.dumps(request.form), sync_status=0, created_at=created_at)
-        data = handle_encounters(action=action, payload=request.form, username=current_user.user_stamp())
+        data = handle_encounters(payload=request.form, username=current_user.user_stamp())
         return jsonify( data )
        
     # Handle Get Request
@@ -547,17 +547,32 @@ def handle_send_message_public(data):
     emit('receive_message', message, room=room)
 
 # *====================================================================*
-#         SocketIO Server Sync
+#         SocketIO Server Sync Actions
+# *====================================================================*
+
+# Add a transaction from a remote host
+def add_sync_transaction(encounter):
+    data = encounter['data']
+    username = encounter['username']
+    created_at = encounter['created_at']
+
+    handle_encounters(payload=data, username=username)
+    log_sync_id = db.log_sync(username=username, aid_station=None, data=json.dumps(request.form), sync_status=2, created_at=created_at)
+    if sync_mode == 'client':
+        remote_sio.emit("encounter_sync_confirmation", log_sync_id, room="encounters", namespace="/sync")
+    else:
+        emit("encounter_sync_confirmation", log_sync_id, room="encounters", namespace="/sync")
+
+
+# *====================================================================*
+#         SocketIO Server Sync Server
 # *====================================================================*
 @socketio.on('join', namespace='/sync')
 def handle_sync_join(data):
     key = data['key']
     room = data['room']
-    print("SERVER CONNECTED SERVER CONNECTED SERVER CONNECTED")
     if key == Config.UPSTREAM_KEY:
         join_room(room)
-        print(request.sid)
-
         previous_encounters = db.get_sync_message()
         emit('sync_encounters', previous_encounters, room=request.sid)
 
