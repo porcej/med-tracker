@@ -48,6 +48,10 @@ try:
 except:
     pass
 
+print(f" * Syncing is {'enabled' if Config.SYNC_ENABLED else 'disabled'}.")
+print(f" * Starting syncing as {sync_mode}.", file=sys.stderr)
+
+
 # Initialize the app
 app = Flask(__name__)
 app.config.from_object(Config)
