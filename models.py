@@ -20,6 +20,7 @@ import os
 import sqlite3
 import sys
 from datetime import datetime
+from uuid import uuid4
 
 class Db:
     _db_path = ""
@@ -186,6 +187,7 @@ class Db:
 
             cursor.execute('''CREATE TABLE IF NOT EXISTS sync_log (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
                               username TEXT NOT NULL DEFAULT 'API',
                               aid_station TEXT,
                               data TEXT,
@@ -199,14 +201,14 @@ class Db:
     # Function to log server sync
     def log_sync(self, username, aid_station, data, sync_status, created_at):
         table_name = 'sync_log'
-        query = f"INSERT INTO {table_name} (username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?)"
+        uuid = str(uuid4());
+        query = f"INSERT INTO {table_name} (uuid username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?)"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query, (username, aid_station, data, sync_status, created_at))
-                id = cursor.lastrowid
+                cursor.execute(query, (uuid, username, aid_station, data, sync_status, created_at))
                 conn.commit()
-                return id
+                return uuid
         except sqlite3.Error as e:
             print(f"Database error creating sync_log {query}: {e}", file=sys.stderr)
             return None
@@ -214,11 +216,15 @@ class Db:
     # Function to update sync status
     def update_sync_status(self, log_id, sync_status):
         table_name = 'sync_log'
-        query = f"UPDATE {table_name} SET synced ? WHERE id = {log_id}"
+        if isinstance(log_id, str):
+            query = f"UPDATE {table_name} SET synced = {sync_status} WHERE uuid = {log_id}"
+        else:
+            query = f"UPDATE {table_name} SET synced = {sync_status} WHERE id = {log_id}"
+        print(query)
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query, (sync_status, ))
+                cursor.execute(query)
                 conn.commit()
         except sqlite3.Error as e:
             print(f'Database error updating sync status "{query}": {e}', file=sys.stderr)
