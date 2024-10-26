@@ -1,5 +1,5 @@
 // var socket = io();
-var socket = io.connect('//' + document.domain + ':8083' + '/chat');
+var socket = io.connect('//' + document.domain + ':' + server_port + '/chat');
 
 var currentRoom = localStorage.getItem('currentRoom') || 'Medical';
 

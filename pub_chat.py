@@ -52,7 +52,7 @@ def index():
 def chat():
     if ('username' not in session) or ('assignment' not in session):
         return redirect(url_for('index'))
-    return render_template('pub_chat.html', username=session['username'], assignment=session['assignment'])
+    return render_template('pub_chat.html', username=session['username'], assignment=session['assignment'], server_port=Config.PORT)
 
 @app.route("/logout")
 def end_session():
@@ -61,6 +61,6 @@ def end_session():
 
 if __name__ == '__main__':
     # create_database()
-    app.run(debug=Config.DEBUG, host=Config.HOST, port=8084)
+    app.run(debug=Config.DEBUG, host=Config.HOST, port=Config.CHAT_PORT)
 
     
