@@ -16,6 +16,7 @@ __email__ = "porcej@gmail.com"
 __status__ = "Development"
 
 
+import json
 import os
 import sqlite3
 import sys
@@ -185,11 +186,11 @@ class Db:
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                            )''')
 
-            cursor.execute('''CREATE TABLE IF NOT EXISTS sync_log (
+            cursor.execute('''CREATE TABLE IF NOT EXISTS encounter_transactions (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
                               uuid TEXT UNIQUE NOT NULL,
                               encounter_uuid TEXT NOT NULL,
-                              username TEXT NOT NULL DEFAULT 'API',
+                              user TEXT NOT NULL DEFAULT 'API',
                               data TEXT,
                               synced INTEGER DEFAULT 0,
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -199,24 +200,31 @@ class Db:
             conn.commit()
 
     # Function to log server sync
-    def log_sync(self, username, data, sync_status, created_at, encounter_uuid, uuid=None):
-        table_name = 'sync_log'
-        if uuid is None:
-            uuid = str(uuid4());
-        query = f"INSERT INTO {table_name} (uuid, encounter_uuid, username, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+
+    def log_transaction(self, encounter_uuid, user, data, created_at, transaction_uuid=None, synced=0):
+        table_name = "encounter_transactions"
+
+        if transaction_uuid is None:
+            transaction_uuid = str(uuid4())
+
+        if not isinstance(data, str):
+            data = json.dumps(data)
+        
+        query = f"INSERT INTO {table_name} (uuid, encounter_uuid, user, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query, (uuid, encounter_uuid, username, data, sync_status, created_at))
+                cursor.execute(query, (transaction_uuid, encounter_uuid, user, data, synced, created_at))
                 conn.commit()
-                return uuid
+                return transaction_uuid
         except sqlite3.Error as e:
-            print(f"Database error creating sync_log {query}: {e}", file=sys.stderr)
+            print(f"Database error recording transaction {query}: {e}", file=sys.stderr)
             return None
 
     # Check if we have this update
     def check_if_synced(self, uuid):
-        table_name = 'sync_log'
+        table_name = 'encounter_transactions'
         query = f"SELECT uuid FROM {table_name} WHERE uuid ='{uuid}'"
         try:
             with self.db_connect() as conn:
@@ -233,7 +241,7 @@ class Db:
 
     # Function to update sync status
     def update_sync_status(self, log_id, sync_status):
-        table_name = 'sync_log'
+        table_name = 'encounter_transactions'
         query = f"UPDATE {table_name} SET synced = {sync_status} WHERE uuid = '{log_id}'"
         try:
             with self.db_connect() as conn:
@@ -245,8 +253,8 @@ class Db:
             return None
 
     # Function to return all chat messages in a chatroom
-    def get_sync_message(self, unsynced_only=True):
-        table_name = 'sync_log'
+    def get_sync_transactions(self, unsynced_only=True):
+        table_name = 'encounter_transactions'
 
         if unsynced_only:
             query = f"SELECT * FROM {table_name} WHERE synced = 0 ORDER BY created_at"
@@ -268,7 +276,7 @@ class Db:
                 data_list.append(data_dict)
             return data_list
         except sqlite3.Error as e:
-            print(f"Database error reading messages for {room}: {e}", file=sys.stderr)
+            print(f"Database error getting transaction to sync {query}: {e}", file=sys.stderr)
             return None
 
     # Function to return all chat messages in a chatroom

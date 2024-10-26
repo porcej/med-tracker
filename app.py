@@ -389,90 +389,103 @@ def data_participants():
     return jsonify(data)
 
 
-def transaction(payloadStr, username="API", encounter_uuid=None, created_at=None):
-        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
-        data = {}
-        uuid = ""
-        query = ""
-        known_actions = ['create', 'edit', 'remove']
-        if created_at is None:
-            created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+# Parse a transaction request
+def parse_transaction(payload):
+    known_actions = ['create', 'edit', 'remove']
+    pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+    transaction_parts = {
+        'data': {},
+    }
+    
+    # Check if data is string, if so unpack to object
+    if isinstance(payload, str):
+        payload = json.loads(payload)
 
-        if isinstance(payloadStr, str):
-            payload = json.loads(payloadStr)
-        else:
-            payload = payloadStr
-            payloadStr = json.dumps(payload)
+    # Validate the post request
+    if 'action' not in payload:
+        e_msg = "Encounter post submitted without action."
+        print(e_msg, file=sys.stderr)
+        return { 'error': e_msg}
 
-        # Validate the post request
-        if 'action' not in payload:
-            e_msg = "Encounter post submitted without action."
-            print(e_msg, file=sys.stderr)
-            return { 'error': e_msg}
+    transaction_parts['action'] = payload['action'].lower()
+    if transaction_parts['action'] not in known_actions:
+        e_msg = f"Encounter post submitted with unknown action {action}."
+        print(e_msg, file=sys.stderr)
+        return { 'error': e_msg}
 
-        action = payload['action'].lower()
-        if action not in known_actions:
-            e_msg = f"Encounter post submitted with unknown action {action}."
-            print(e_msg, file=sys.stderr)
-            return { 'error': e_msg}
+    for key in payload.keys():
+        tokens = re.findall(r'\[(.*?)\]', key)
+        if len(tokens) == 2:
+            [transaction_parts['encounter_uuid'], field_key] = tokens
+            transaction_parts['data'][field_key] = payload[key]
 
-        for key in payload.keys():
-            tokens = re.findall(r'\[(.*?)\]', key)
-            if len(tokens) == 2:
-                [uuid, field_key] = tokens
-                data[field_key] = payload[key]
+    return transaction_parts
 
-        try:
-            uuid_obj = UUID(uuid, version=4)
-        except ValueError:
-            uuid = encounter_uuid
- 
-         # Handle Editing an existing record
-        if action == 'edit':
-            # data_keys = data.keys()
+def transact_create(user, data, uuid=None):
+    try: 
+        uuidObj = UUID(uuid, version=4)
+    except ValueError:
+        uuid  = str(uuid4())
+    data['uuid'] = uuid
+    data_keys = data.keys()
+    query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys)})"
+    id = db.execute_query(query, data)
 
-            print(f" - Editing encounter with UUID: {uuid}", file=sys.stderr)
+    new_data = db.zip_encounters(uuid=uuid)
+    jnew_data = json.dumps(new_data)
+    # db.log_encounter_audit(action='create' user_id=user, resultant_value=jnew_data, uuid=uuid)
+    send_sio_msg('new_encounter', jnew_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
-            data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
-            data_vals = list(data.values())
+def transact_edit(user, data, uuid):
+    data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
+    data_vals = list(parts['data'].values())
 
-            query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
-            db.execute_query(query, data_vals)
-            new_data = db.zip_encounters(uuid=uuid)
+    query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
+    print(query)
+    db.execute_query(query, data_vals)
+    new_data = db.zip_encounters(uuid=uuid)
+    print(json.dumps(new_data, indent=8))
 
-            jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=username, resultant_value=jnew_data)
-            log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
-            send_sio_msg('edit_encounter', new_data)
-            return new_data
+    jnew_data = json.dumps(new_data)
+    db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=username, resultant_value=jnew_data)
+    log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
+    send_sio_msg('edit_encounter', new_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
-        # Handle Creating a new record
-        if action == 'create':
-            uuid = str(uuid4())
-            data['uuid'] = uuid
-            data_keys = data.keys()
-            query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys)})"
-            id = db.execute_query(query, data)
+def transact_delete(user, uuid):
+    query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
+    db.execute_query(query)
+    
+    new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
+    jnew_data = json.dumps(new_data)
+    db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
+    log_sync_id = db.log_sync(username=username, data=payloadStr , sync_status=0, created_at=created_at, encounter_uuid=uuid)
+    send_sio_msg('remove_encounter', jnew_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
-            new_data = db.zip_encounters(uuid=uuid)
-            jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
-            log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
-            send_sio_msg('new_encounter', jnew_data)
-            return new_data
 
-        # Handle Remove
-        if action  == 'remove':
-            query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
-            db.execute_query(query)
-            
-            new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
-            jnew_data = json.dumps(new_data)
-            db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
-            log_sync_id = db.log_sync(username=username, data=payloadStr , sync_status=0, created_at=created_at, encounter_uuid=uuid)
-            send_sio_msg('remove_encounter', jnew_data)
-            return new_data
+def transaction(payload, user="API", encounter_uuid=None, created_at=None):
+    parts = parse_transaction(payload)
 
+    # If we had an error parsing, just return that message
+    if 'error' in parts:
+        return parts
+
+    # If we have an encounter UUID, lets use it
+    if encounter_uuid is not None:
+        parts['encounter_uuid'] = encounter_uuid
+
+    # Handle Creating a new record
+    if parts['action'] == 'create':
+        return transact_create(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+
+     # Handle Editing an existing record
+    if parts['action'] == 'edit':
+        return transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+
+    if parts['action'] == 'remove':
+       return transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
 
 
 @internal_api_bp.route('/encounters', methods=['GET', 'POST'])
@@ -484,12 +497,17 @@ def data_encounters(aid_station=None):
         aid_station = aid_station.replace("--", "/")
 
     if request.method == 'POST':
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
         payload = json.dumps(request.form)
 
-        
-        data = transaction(payloadStr=request.form, username=current_user.user_stamp())
+        data = transaction(payload=payload, user=current_user.user_stamp())
+        encounter_uuid = data['encounter_uuid']
+        user = data['user']
+
+        transaction_id = db.log_transaction(encounter_uuid=encounter_uuid, user=user, data=payload, created_at=created_at, transaction_uuid=None, synced=0)
         notify_sync_new_record()
-        return jsonify( data )
+        return jsonify( data['data'] )
        
     # Handle Get Request
     if request.method == "GET":
@@ -577,26 +595,29 @@ def notify_sync_new_record(room='encounters'):
     message_type = 'sync_encounters'
     namespace = "/sync"
 
-    previous_encounters = db.get_sync_message()
+    previous_encounters = db.get_sync_transactions()
 
+    # print(json.dumps(previous_encounters, indent=8))
+    # print("^"*100)
     if len(previous_encounters) > 0:
         if sync_mode == 'client':
             if remote_sio.connected:
                 remote_sio.emit(message_type, previous_encounters, namespace=namespace)
         elif sync_mode == 'server':
             emit(message_type, previous_encounters, room=room, namespace=namespace)
-            previous_encounters = db.get_sync_message()
 
 # Add a transaction from a remote host
-def add_sync_transaction(encounter):
+def add_sync_transaction(message):
     msg_type = "encounter_sync_confirmation"
-    data = encounter['data']
-    username = encounter['username']
-    created_at = encounter['created_at']
-    encounter_uuid = encounter['encounter_uuid']
-    uuid = encounter['uuid']
+    data = message['data']
+    username = message['username']
+    created_at = message['created_at']
+    encounter_uuid = message['encounter_uuid']
+    uuid = message['uuid']
 
     log_sync_id = db.log_sync(username=username, data=data, sync_status=1, created_at=created_at, uuid=uuid, encounter_uuid=encounter_uuid)
+    print(f"Add tranasction message: {json.dumps(message, indent=4)}")
+    print(f"**************** {log_sync_id}--{uuid}")
     if log_sync_id is not None:
         transaction(payloadStr=data, username=username, encounter_uuid=encounter_uuid, created_at=created_at)
     
@@ -622,8 +643,8 @@ def handle_sync_join(data):
 @socketio.on('sync_encounters', namespace='/sync')
 def handle_sync_encounters(data):
     if Config.SYNC_ENABLED:
-        for encounter in data:
-            add_sync_transaction(encounter)
+        for item in data:
+            add_sync_transaction(item)
 
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @socketio.on('encounter_sync_confirmation', namespace='/sync')
@@ -669,6 +690,7 @@ def remote_handle_sync_encounters(data):
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @remote_sio.on('encounter_sync_confirmation', namespace='/sync')
 def remote_handle_sync_confirmation(data):
+    print(f'Encounter Confirmation {json.dumps(data, indent=4)}')
     db.update_sync_status(log_id=data['id'], sync_status=2)
 
 if sync_mode == 'client':
