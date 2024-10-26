@@ -214,14 +214,14 @@ class Db:
     # Function to update sync status
     def update_sync_status(self, log_id, sync_status):
         table_name = 'sync_log'
-        query = f"UPDATE {table_name} SET synced {sync_status} WHERE id = {log_id}"
+        query = f"UPDATE {table_name} SET synced ? WHERE id = {log_id}"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query)
+                cursor.execute(query, (sync_status, ))
                 conn.commit()
         except sqlite3.Error as e:
-            print(f"Database error updating sync status {query}: {e}", file=sys.stderr)
+            print(f'Database error updating sync status "{query}": {e}', file=sys.stderr)
             return None
 
     # Function to return all chat messages in a chatroom
