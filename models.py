@@ -178,7 +178,6 @@ class Db:
 
             cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
-                              uuid TEXT UNIQUE NOT NULL,
                               room TEXT NOT NULL,
                               assignment TEXT NOT NULL,
                               username TEXT NOT NULL,
