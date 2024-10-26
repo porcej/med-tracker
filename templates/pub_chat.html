@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Chat | Med Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" type="text/css"> -->
+    <link href="{{ url_for('static', filename='css/chat.css') }}" rel="stylesheet" type="text/css">
+    <script src="{{ url_for('static', filename='vend/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vend/socket.io/4.4.1/socket.io.min.js')}}"></script>
+    <style type="text/css">
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    </style>
+</head>
+<body>
+    <h2>Chatting as <strong>{{ assignment }}</strong> ({{username}})</h2> <a href="{{ url_for('end_session') }}">Logout</a>
+    <label for="room-select">Select Chat Room:</label>
+    <select id="room-select">
+        <option value="Medical">Medical</option>
+        <option value="AREDN">AREDN</option>
+        <option value="Log">Log</option>
+    </select>
+    <div id="chat-box"></div>
+    <form id="message-form">
+        <input type="text" id="message" placeholder="Enter your message">
+        <input type="hidden" id="assignment" value="{{ assignment }}">
+        <input type="hidden" id="username" value="{{ username }}">
+        <button type="submit">Send</button>
+    </form>
+  <script>
+    var assignment = "{{ assignment }}";
+    var username = "{{ username }}";
+    var server_port = {{ server_port }};
+    if (!localStorage.getItem('currentRoom')) {
+      localStorage.setItem('currentRoom', 'Medical'); // default room
+    }
+    var currentRoom = localStorage.getItem('currentRoom');
+    // Set the dropdown to the current room
+    document.getElementById('room-select').value = currentRoom;
+  </script>
+  <script src="{{ url_for('static', filename='js/pub_chat.js') }}"></script>
+</body>
+</html>

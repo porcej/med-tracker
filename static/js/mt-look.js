@@ -5,7 +5,7 @@ let openVals;
 const encounterEditor = new DataTable.Editor({
     ajax: `.${window.internal_api_base_url}/encounters${window.current_aid_station_path}`,
     table: '#encounters-table',
-    idSrc: 'id',
+    idSrc: 'uuid',
     fields: [
          {
             label: 'Bib Number',
@@ -362,7 +362,7 @@ const manager_cols = [
 
 // Encounters DataTable shown in the page
 encounterTable = new DataTable('#encounters-table', {
-    idSrc: 'id',
+    idSrc: 'uuid',
     ajax: `.${window.internal_api_base_url}/encounters${window.current_aid_station_path}`,
     columns: window.current_user_is_admin ? manager_cols : aid_station_cols,
     layout: {

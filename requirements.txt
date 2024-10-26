@@ -35,3 +35,4 @@ tzdata
 XlsxWriter
 flask-restx
 flask-jwt-extended
+socketio-client

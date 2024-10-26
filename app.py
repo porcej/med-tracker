@@ -17,11 +17,13 @@ __license__ = "MIT"
 
 from config import Config
 from io import BytesIO
+import json
 import os
 import pandas as pd
 import re
 import sqlite3
 import sys
+from uuid import uuid4, UUID
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint, g
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
@@ -29,10 +31,25 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
+import time
+import socketio as socketioClient
+import threading
 
 from models import Db
 
 from api import api_bp
+
+sync_mode = 'server'
+
+remote_sio = socketioClient.Client()
+try:
+    if (Config.UPSTREAM_ENDPOINT != "") and Config.SYNC_ENABLED:
+        sync_mode = 'client'
+except:
+    pass
+
+print(f" * Syncing is {'enabled' if Config.SYNC_ENABLED else 'disabled'}.")
+print(f" * Starting syncing as {sync_mode}.", file=sys.stderr)
 
 
 # Initialize the app
@@ -372,6 +389,97 @@ def data_participants():
     return jsonify(data)
 
 
+# Parse a transaction request
+def parse_transaction(payload):
+    known_actions = ['create', 'edit', 'remove']
+    pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+    transaction_parts = {
+        'data': {},
+    }
+    
+    # Check if data is string, if so unpack to object
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+
+    # Validate the post request
+    if 'action' not in payload:
+        e_msg = "Encounter post submitted without action."
+        print(e_msg, file=sys.stderr)
+        return { 'error': e_msg}
+
+    transaction_parts['action'] = payload['action'].lower()
+    if transaction_parts['action'] not in known_actions:
+        e_msg = f"Encounter post submitted with unknown action {action}."
+        print(e_msg, file=sys.stderr)
+        return { 'error': e_msg}
+
+    for key in payload.keys():
+        tokens = re.findall(r'\[(.*?)\]', key)
+        if len(tokens) == 2:
+            [transaction_parts['encounter_uuid'], field_key] = tokens
+            transaction_parts['data'][field_key] = payload[key]
+
+    return transaction_parts
+
+def transact_create(user, data, uuid=None):
+    try: 
+        uuidObj = UUID(uuid, version=4)
+    except ValueError:
+        uuid  = str(uuid4())
+    data['uuid'] = uuid
+    data_keys = data.keys()
+    query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys)})"
+    db.execute_query(query, data)
+    new_data = db.zip_encounters(uuid=uuid)
+    send_sio_msg('new_encounter', new_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
+
+def transact_edit(user, data, uuid):
+    data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
+    data_vals = list(data.values())
+
+    query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
+    db.execute_query(query, data_vals)
+    new_data = db.zip_encounters(uuid=uuid)
+    send_sio_msg('edit_encounter', new_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
+
+def transact_delete(user, uuid):
+    query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
+    db.execute_query(query)
+    new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
+    send_sio_msg('remove_encounter', new_data)
+    return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
+
+
+def transaction(payload, user="API", encounter_uuid=None, created_at=None):
+    parts = parse_transaction(payload)
+
+    # If we had an error parsing, just return that message
+    if 'error' in parts:
+        return parts
+
+    # If we have an encounter UUID, lets use it
+    if encounter_uuid is not None:
+        parts['encounter_uuid'] = encounter_uuid
+
+    # Handle Creating a new record
+    if parts['action'] == 'create':
+        ret_val = transact_create(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+
+     # Handle Editing an existing record
+    elif parts['action'] == 'edit':
+        ret_val = transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+
+    # Handle removing 
+    elif parts['action'] == 'remove':
+       ret_val = transact_delete(user=user, uuid=parts['encounter_uuid'])
+
+    jnew_data = json.dumps(ret_val['data'])
+    db.log_encounter_audit(action=parts['action'], uuid=ret_val['encounter_uuid'], user_id=user, resultant_value=jnew_data)
+    return ret_val
+
+
 @internal_api_bp.route('/encounters', methods=['GET', 'POST'])
 @internal_api_bp.route('/encounters/<aid_station>', methods=['GET', 'POST'])
 @login_required
@@ -381,67 +489,18 @@ def data_encounters(aid_station=None):
         aid_station = aid_station.replace("--", "/")
 
     if request.method == 'POST':
+        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Validate the post request
-        if 'action' not in request.form:
-            return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
+        payload = json.dumps(request.form)
 
-        action = request.form['action']
+        data = transaction(payload=payload, user=current_user.user_stamp())
+        encounter_uuid = data['encounter_uuid']
+        user = data['user']
 
-        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
-        data = {}
-        id = 0
-        query = ""
-
-        for key in request.form.keys():
-            matches = re.search(pattern, key)
-            if matches:
-                id = int(matches.group(1))
-                field_key = matches.group(2)
-                data[field_key] = request.form[key]
-
-        # Handle Editing an existing record
-        if action.lower() == 'edit':
-            # data_keys = data.keys()
-
-            data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
-            data_vals = values = list(data.values()) + [id]
-
-            query = f"UPDATE encounters SET {data_cols} WHERE id = ?"
-            db.execute_query(query, data_vals
-                )
-            # query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
-            # execute_query(query, data)
-
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
-            send_sio_msg('edit_encounter', jnew_data)
-            return jnew_data
-
-        # Handle Creating a new record
-        if action.lower() == 'create':
-            data_keys = data.keys()
-            query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys) })"
-            id = db.execute_query(query, data)
-
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'))
-            send_sio_msg('new_encounter', jnew_data)
-            return jnew_data
-
-        # Handle Remove
-        if action.lower() == 'remove':
-            query = f"UPDATE encounters SET delete_flag=1 WHERE id={id}"
-            db.execute_query(query)
-            
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
-            send_sio_msg('remove_encounter', jnew_data)
-            return jnew_data
-
+        transaction_id = db.log_transaction(encounter_uuid=encounter_uuid, user=user, data=payload, created_at=created_at, transaction_uuid=None, synced=0)
+        notify_sync_new_record()
+        return jsonify( data['data'] )
+       
     # Handle Get Request
     if request.method == "GET":
         with db.db_connect() as conn:
@@ -474,31 +533,6 @@ def send_sio_msg(msg_type, msg, room=None):
 # *====================================================================*
 #         SocketIO Chat
 # *====================================================================*
-# @socketio.on('joined', namespace='/chat')
-# def joined(message):
-#     """Sent by clients when they enter a room.
-#     A status message is broadcast to all people in the room."""
-#     room = 'chat'
-#     join_room(room)
-#     emit('status', {'msg': current_user.name + ' has entered the room.'}, room=room)
-
-
-# @socketio.on('text', namespace='/chat')
-# def text(message):
-#     """Sent by a client when the user entered a new message.
-#     The message is sent to all people in the room."""
-#     room = 'chat'
-#     emit('message', {'msg': current_user.name + ':' + message['msg']}, room=room)
-
-
-# @socketio.on('left', namespace='/chat')
-# def left(message):
-#     """Sent by clients when they leave a room.
-#     A status message is broadcast to all people in the room."""
-#     room = 'chat'
-#     leave_room(room)
-#     emit('status', {'msg': current_user.name + ' has left the room.'}, room=room)
-
 @socketio.on('join', namespace='/chat')
 def handle_join(data):
     room = data['room']
@@ -543,6 +577,113 @@ def handle_send_message_public(data):
     }
 
     emit('receive_message', message, room=room)
+
+# *====================================================================*
+#         SocketIO Server Sync Actions
+# *====================================================================*
+
+# Send out a single sync message to Room for sync id
+def notify_sync_new_record(room='encounters'):
+    message_type = 'sync_encounters'
+    namespace = "/sync"
+
+    previous_encounters = db.get_sync_transactions()
+
+    if len(previous_encounters) > 0:
+        if sync_mode == 'client':
+            if remote_sio.connected:
+                remote_sio.emit(message_type, previous_encounters, namespace=namespace)
+        elif sync_mode == 'server':
+            emit(message_type, previous_encounters, room=room, namespace=namespace)
+
+# Add a transaction from a remote host
+def add_sync_transaction(message):
+    msg_type = "encounter_sync_confirmation"
+    data = message['data']
+    user = message['user']
+    created_at = message['created_at']
+    e_uuid = message['encounter_uuid']
+    uuid = message['uuid']
+
+    transaction_uuid = db.log_transaction(encounter_uuid=e_uuid, user=user, data=data, created_at=created_at, transaction_uuid=uuid, synced=2)
+    if transaction_uuid is not None:
+        transaction(payload=data, user=user, encounter_uuid=e_uuid, created_at=created_at)
+    
+    if sync_mode == 'client':
+        if remote_sio.connected:
+            remote_sio.emit(msg_type, {'id': transaction_uuid}, namespace="/sync")
+    else:
+        emit(msg_type, {'id': transaction_uuid}, room="encounters", namespace="/sync")
+
+
+# *====================================================================*
+#         SocketIO Server Sync Server
+# *====================================================================*
+@socketio.on('join', namespace='/sync')
+def handle_sync_join(data):
+    key = data['key']
+    room = data['room']
+    if key == Config.UPSTREAM_KEY:
+        join_room(room)
+        notify_sync_new_record(room=request.sid)
+
+# Handle a request to sync multiple encounters
+@socketio.on('sync_encounters', namespace='/sync')
+def handle_sync_encounters(data):
+    if Config.SYNC_ENABLED:
+        for item in data:
+            add_sync_transaction(item)
+
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@socketio.on('encounter_sync_confirmation', namespace='/sync')
+def handle_sync_confirmation(data):
+    db.update_sync_status(log_id=data['id'], sync_status=2)
+# *====================================================================*
+#         SocketIO Server Sync Client
+# *====================================================================*
+
+def connect_to_remote_server():
+    """Attempt to connect to the remote server with retry on failure."""
+    while not remote_sio.connected:
+        try:
+            remote_sio.connect(Config.UPSTREAM_ENDPOINT, namespaces=["/sync"])
+            print("Successfully connected to the remote Socket.IO server.", file=sys.stderr)
+        except socketioClient.exceptions.ConnectionError as e:
+            print(f"SYNC Client connection failed: {e}. Retrying in 60 seconds...", file=sys.stderr)
+            time.sleep(60)  # Wait before retrying
+
+@remote_sio.event(namespace="/sync")
+def connect():
+    data = {
+        'key': Config.UPSTREAM_KEY,
+        'room': 'encounters'
+    }
+    remote_sio.emit('join', data, namespace="/sync")
+    notify_sync_new_record()
+
+@remote_sio.event(namespace="/sync")
+def disconnect():
+    print("Disconnected from the remote Socket.IO server. Attempting to reconnect...")
+    # Start reconnection attempts in a separate thread
+    threading.Thread(target=connect_to_remote_server, daemon=True).start()
+
+# Handle a request to sync multiple encounters
+@remote_sio.on('sync_encounters', namespace='/sync')
+def remote_handle_sync_encounters(data):
+    if Config.SYNC_ENABLED:
+        for encounter in data:
+            add_sync_transaction(encounter)
+
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@remote_sio.on('encounter_sync_confirmation', namespace='/sync')
+def remote_handle_sync_confirmation(data):
+    db.update_sync_status(log_id=data['id'], sync_status=2)
+
+if sync_mode == 'client':
+    # Connect initially to the remote server in a separate thread
+    threading.Thread(target=connect_to_remote_server, daemon=True).start()
+
+
 
 if __name__ == '__main__':
     # create_database()

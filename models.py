@@ -16,10 +16,12 @@ __email__ = "porcej@gmail.com"
 __status__ = "Development"
 
 
+import json
 import os
 import sqlite3
 import sys
 from datetime import datetime
+from uuid import uuid4
 
 class Db:
     _db_path = ""
@@ -60,6 +62,7 @@ class Db:
             # Encounters Table - Holds a list of all encounters
             cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
                               aid_station TEXT,
                               bib TEXT,
                               first_name TEXT,
@@ -93,6 +96,11 @@ class Db:
                               num_encounters INTEGER DEFAULT 1
                            )''')
 
+            cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='uuid' ''')
+            if cursor.fetchall()[0][0] == 0:
+                print("Updating encounters table... adding UUID", file=sys.stderr)
+                cursor.execute('''ALTER TABLE encounters ADD uuid TEXT UNIQUE NOT NULL ''')
+
             cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='delete_flag' ''')
             if cursor.fetchall()[0][0] == 0:
                 print("Updating encounters table... adding delete flag", file=sys.stderr)
@@ -113,6 +121,7 @@ class Db:
                 # Encounters Table - Holds a list of all encounters
             cursor.execute('''CREATE TABLE IF NOT EXISTS encounters_audit_log (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT NOT NULL,
                               action TEXT,
                               record_id TEXT,
                               timestamp TEXT,
@@ -169,6 +178,7 @@ class Db:
 
             cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
                               room TEXT NOT NULL,
                               assignment TEXT NOT NULL,
                               username TEXT NOT NULL,
@@ -176,14 +186,104 @@ class Db:
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                            )''')
 
+            cursor.execute('''CREATE TABLE IF NOT EXISTS encounter_transactions (
+                              id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
+                              encounter_uuid TEXT NOT NULL,
+                              user TEXT NOT NULL DEFAULT 'API',
+                              data TEXT,
+                              synced INTEGER DEFAULT 0,
+                              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                           )''')
+
             print("Database created!", file=sys.stderr)
             conn.commit()
+
+    # Function to log server sync
+
+    def log_transaction(self, encounter_uuid, user, data, created_at, transaction_uuid=None, synced=0):
+        table_name = "encounter_transactions"
+
+        if transaction_uuid is None:
+            transaction_uuid = str(uuid4())
+
+        if not isinstance(data, str):
+            data = json.dumps(data)
+        
+        query = f"INSERT INTO {table_name} (uuid, encounter_uuid, user, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (transaction_uuid, encounter_uuid, user, data, synced, created_at))
+                conn.commit()
+                return transaction_uuid
+        except sqlite3.Error as e:
+            print(f"Database error recording transaction {query}: {e}", file=sys.stderr)
+            return None
+
+    # Check if we have this update
+    def check_if_synced(self, uuid):
+        table_name = 'encounter_transactions'
+        query = f"SELECT uuid FROM {table_name} WHERE uuid ='{uuid}'"
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                data = cursor.fetchall()
+                if len(data) > 0:
+                    return True
+                else:
+                    return False
+        except sqlite3.Error as e:
+            print(f"Database error checking if synced {query}: {e}", file=sys.stderr)
+            return False
+
+    # Function to update sync status
+    def update_sync_status(self, log_id, sync_status):
+        table_name = 'encounter_transactions'
+        query = f"UPDATE {table_name} SET synced = {sync_status} WHERE uuid = '{log_id}'"
+        try:
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+        except sqlite3.Error as e:
+            print(f'Database error updating sync status "{query}": {e}', file=sys.stderr)
+            return None
+
+    # Function to return all chat messages in a chatroom
+    def get_sync_transactions(self, unsynced_only=True):
+        table_name = 'encounter_transactions'
+
+        if unsynced_only:
+            query = f"SELECT * FROM {table_name} WHERE synced = 0 ORDER BY created_at"
+        else:
+            query = f"SELECT * FROM {table_name} ORDER BY created_at"
+
+        try:
+            
+            with self.db_connect() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                # Get the column names
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = [column[1] for column in cursor.fetchall()]
+                data_list = []
+            for row in rows:
+                data_dict = dict(zip(columns, row))
+                data_list.append(data_dict)
+            return data_list
+        except sqlite3.Error as e:
+            print(f"Database error getting transaction to sync {query}: {e}", file=sys.stderr)
+            return None
 
     # Function to return all chat messages in a chatroom
     def get_chat_messages(self, room):
         table_name = 'chat_messages'
         try:
-            query = f"SELECT * FROM chat_messages WHERE room = ? ORDER BY created_at"
+            query = f"SELECT * FROM {table_name} WHERE room = ? ORDER BY created_at"
             with self.db_connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query, (room,))
@@ -232,22 +332,25 @@ class Db:
 
 
     # Function to log audit transactions
-    def log_encounter_audit(self, action, record_id, user_id, resultant_value):
+    def log_encounter_audit(self, action, uuid, user_id, resultant_value):
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                query = f"INSERT INTO encounters_audit_log (action, record_id, user_id, timestamp, resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
-                cursor.execute(query)
+                query = f"INSERT INTO encounters_audit_log (action, uuid, user_id, timestamp, resultant_value) VALUES (?, ?, ?, ?, ?)"
+                values = (action, uuid, user_id, timestamp, resultant_value)
+                cursor.execute(query, values)
                 conn.commit()
         except sqlite3.Error as e:
-            print(f"Database error writing audit log: {e}", file=sys.stderr)
+            print(f"Database error writing audit log -{query}: {e}", file=sys.stderr)
 
     # Function to export data as a zipped dict
-    def zip_encounters(self, id=None, aid_station=None, include_deleted=False, only_deleted=False):
+    def zip_encounters(self, id=None, uuid=None, aid_station=None, include_deleted=False, only_deleted=False):
         where_clauses = []
         if id is not None:
             where_clauses.append(f'ID={id}')
+        if uuid is not None:
+            where_clauses.append(f"uuid='{uuid}'")
         if aid_station is not None:
             where_clauses.append(f"aid_station='{aid_station}'")
         if include_deleted is False:
