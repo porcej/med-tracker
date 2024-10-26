@@ -60,6 +60,7 @@ class Db:
             # Encounters Table - Holds a list of all encounters
             cursor.execute('''CREATE TABLE IF NOT EXISTS encounters (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
                               aid_station TEXT,
                               bib TEXT,
                               first_name TEXT,
@@ -93,6 +94,11 @@ class Db:
                               num_encounters INTEGER DEFAULT 1
                            )''')
 
+            cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='uuid' ''')
+            if cursor.fetchall()[0][0] == 0:
+                print("Updating encounters table... adding UUID", file=sys.stderr)
+                cursor.execute('''ALTER TABLE encounters ADD uuid TEXT UNIQUE NOT NULL ''')
+
             cursor.execute('''SELECT COUNT(*) AS CNTREC FROM pragma_table_info('encounters') WHERE name='delete_flag' ''')
             if cursor.fetchall()[0][0] == 0:
                 print("Updating encounters table... adding delete flag", file=sys.stderr)
@@ -113,6 +119,7 @@ class Db:
                 # Encounters Table - Holds a list of all encounters
             cursor.execute('''CREATE TABLE IF NOT EXISTS encounters_audit_log (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT NOT NULL,
                               action TEXT,
                               record_id TEXT,
                               timestamp TEXT,
@@ -169,6 +176,7 @@ class Db:
 
             cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
+                              uuid TEXT UNIQUE NOT NULL,
                               room TEXT NOT NULL,
                               assignment TEXT NOT NULL,
                               username TEXT NOT NULL,
