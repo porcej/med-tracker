@@ -204,7 +204,9 @@ class Db:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
                 cursor.execute(query, (username, aid_station, data, sync_status, created_at))
+                id = cursor.lastrowid
                 conn.commit()
+                return id
         except sqlite3.Error as e:
             print(f"Database error creating sync_log {query}: {e}", file=sys.stderr)
             return None
