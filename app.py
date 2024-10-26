@@ -31,12 +31,22 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
-
+import time
+import socketio as socketioClient
+import threading
 
 from models import Db
 
 from api import api_bp
 
+sync_mode = 'server'
+
+remote_sio = socketioClient.Client()
+try:
+    if (Config.UPSTREAM_ENDPOINT != "") and Config.SYNC_ENABLED:
+        sync_mode = 'client'
+except:
+    pass
 
 # Initialize the app
 app = Flask(__name__)
@@ -381,15 +391,11 @@ def handle_encounters(action, payload, username):
         uuid = ""
         query = ""
 
-        print("HERE")
         for key in payload.keys():
             tokens = re.findall(r'\[(.*?)\]', key)
             if len(tokens) == 2:
                 [uuid, field_key] = tokens
                 data[field_key] = payload[key]
-
-        print("FIN")
-        print(f'UUID: {uuid}')  
 
          # Handle Editing an existing record
         if action == 'edit':
@@ -551,6 +557,51 @@ def handle_sync_join(data):
 
         previous_encounters = db.get_sync_message()
         emit('sync_encounters', previous_encounters, room=request.sid)
+
+
+# *====================================================================*
+#         SocketIO Server Sync Client
+# *====================================================================*
+
+def connect_to_remote_server():
+    """Attempt to connect to the remote server with retry on failure."""
+    while not remote_sio.connected:
+        try:
+            remote_sio.connect(Config.UPSTREAM_ENDPOINT, namespaces=["/sync"])
+            print("Successfully connected to the remote Socket.IO server.", file=sys.stderr)
+        except socketioClient.exceptions.ConnectionError as e:
+            print(f"SYNC Client connection failed: {e}. Retrying in 30 seconds...", file=sys.stderr)
+            time.sleep(5)  # Wait before retrying
+
+@remote_sio.event
+def disconnect():
+    print("Disconnected from the remote Socket.IO server. Attempting to reconnect...")
+    # Start reconnection attempts in a separate thread
+    threading.Thread(target=connect_to_remote_server, daemon=True).start()
+
+# Handle Encounter Sync Confirmation (set sync_status 2)
+@remote_sio.on('encounter_sync_confirmation', namespace='/sync')
+def handle_sync_confirmation(id):
+    db.update_sync_status(log_id=id, sync_status=2)
+
+# Handle a request to sync multiple encounters
+@remote_sio.on('sync_encounters', namespace='/sync')
+def handle_sync_encounters(data):
+    if Config.SYNC_ENABLED:
+        for encounter in data:
+            add_sync_transaction(encounter)
+
+# Handle a request to sync multiple encounters
+@remote_sio.on('sync_encounter', namespace='/sync')
+def handle_sync_encounters(data):
+    if Config.SYNC_ENABLED:
+        add_sync_transaction(data)
+
+if sync_mode == 'client':
+    # Connect initially to the remote server in a separate thread
+    threading.Thread(target=connect_to_remote_server, daemon=True).start()
+
+
 
 if __name__ == '__main__':
     # create_database()
