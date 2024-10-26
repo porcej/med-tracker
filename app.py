@@ -582,7 +582,7 @@ def connect():
         'key': Config.UPSTREAM_KEY,
         'room': encounters
     }
-    sio.emit('join', msg)
+    sio.emit('join', msg, namespace="/sync")
 
 @remote_sio.event
 def disconnect():
