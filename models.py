@@ -235,7 +235,7 @@ class Db:
             
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query, (room,))
+                cursor.execute(query)
                 rows = cursor.fetchall()
                 # Get the column names
                 cursor.execute(f"PRAGMA table_info({table_name})")
