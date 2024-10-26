@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Sign In | Med Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" type="text/css">
+</head>
+<body>
+<div class="content">
+<div class="login-form">
+  <h2>Med Tracking Sign In</h2>
+  <div class="row">
+    <div class="col-md-4">
+      <form action="/" method="post" novalidate="" class="login-form">
+        <p>
+          <label for="assignment">Assignment</label><br>
+          <select name="assignment" id="aid-station-select">
+            <option value="">Assignment</option>
+            {% for aid_station in assignments %}
+               <option value="{{ aid_station}}">{{ aid_station }}</option>
+            {% endfor %}
+          </select>
+        </p>
+        <p>
+          <label for="username">Name (First Initial Lastname or Amateur Radio Callsign)</label><br>
+          <input id="username" name="username" required="" size="32" type="text" value="" class="form-input"><br>
+        </p>
+        <p><button type="submit" name="submit" value="Sign In">Sign In</button></p>
+      </form>
+      {% with errors = get_flashed_messages(category_filter=["error"]) %}
+        {% if errors %}
+        <div class="alert-message block-message error">
+          <ul>
+            {%- for msg in errors %}
+            <li>{{ msg }}</li>
+            {% endfor -%}
+          </ul>
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% with successes = get_flashed_messages(category_filter=["success"]) %}
+        {% if successes %}
+        <div class="success-message block-message error">
+            {%- for msg in successes %}
+                {{ msg }}
+                <br>
+            {% endfor -%}
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+  </div>
+</div>
+</body>
+</html>
