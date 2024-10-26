@@ -549,10 +549,6 @@ def handle_send_message_public(data):
 # *====================================================================*
 #         SocketIO Server Sync
 # *====================================================================*
-@socketio.on('connection')
-def handle_sync_connection(data):
-
-
 @socketio.on('join', namespace='/sync')
 def handle_sync_join(data):
     key = data['key']
