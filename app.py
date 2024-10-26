@@ -467,9 +467,11 @@ def data_encounters(aid_station=None):
 
     if request.method == 'POST':
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        payload = json.dumps(request.form)
 
-        db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=json.dumps(request.form), sync_status=0, created_at=created_at)
+        log_sync_id = db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=payload, sync_status=0, created_at=created_at)
         data = handle_encounters(payload=request.form, username=current_user.user_stamp())
+        notify_sync_new_record()
         return jsonify( data )
        
     # Handle Get Request
@@ -553,6 +555,19 @@ def handle_send_message_public(data):
 #         SocketIO Server Sync Actions
 # *====================================================================*
 
+# Send out a single sync message to Room for sync id
+def notify_sync_new_record(room='encounters'):
+    message_type = 'sync_encounters'
+    namespace = "/sync"
+
+    previous_encounters = db.get_sync_message()
+
+    if sync_mode == 'client':
+        remote_sio.emit(message_type, previous_encounters, namespace=namespace)
+    elif sync_mode == 'server':
+        emit(message_type, previous_encounters, room=room, namespace=namespace)
+        previous_encounters = db.get_sync_message()
+
 # Add a transaction from a remote host
 def add_sync_transaction(encounter):
     data = encounter['data']
@@ -583,8 +598,7 @@ def handle_sync_join(data):
     room = data['room']
     if key == Config.UPSTREAM_KEY:
         join_room(room)
-        previous_encounters = db.get_sync_message()
-        emit('sync_encounters', previous_encounters, room=request.sid)
+        notify_sync_new_record(room=request.sid)
 
 
 # *====================================================================*
