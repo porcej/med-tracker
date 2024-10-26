@@ -302,22 +302,24 @@ class Db:
 
 
     # Function to log audit transactions
-    def log_encounter_audit(self, action, record_id, user_id, resultant_value):
+    def log_encounter_audit(self, action, uuid, user_id, resultant_value):
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                query = f"INSERT INTO encounters_audit_log (action, record_id, user_id, timestamp, resultant_value) VALUES ('{action}', '{record_id}', '{user_id}', '{timestamp}', '{resultant_value}' )"
+                query = f"INSERT INTO encounters_audit_log (action, uuid, user_id, timestamp, resultant_value, ) VALUES ('{action}', '{uuid}', '{user_id}', '{timestamp}', '{resultant_value}' )"
                 cursor.execute(query)
                 conn.commit()
         except sqlite3.Error as e:
             print(f"Database error writing audit log: {e}", file=sys.stderr)
 
     # Function to export data as a zipped dict
-    def zip_encounters(self, id=None, aid_station=None, include_deleted=False, only_deleted=False):
+    def zip_encounters(self, id=None, uuid=None, aid_station=None, include_deleted=False, only_deleted=False):
         where_clauses = []
         if id is not None:
             where_clauses.append(f'ID={id}')
+        if uuid is not None:
+            where_clauses.append(f"uuid='{uuid}'")
         if aid_station is not None:
             where_clauses.append(f"aid_station='{aid_station}'")
         if include_deleted is False:

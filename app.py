@@ -23,6 +23,7 @@ import pandas as pd
 import re
 import sqlite3
 import sys
+from uuid import uuid4
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint, g
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
@@ -30,6 +31,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
+
 
 from models import Db
 
@@ -373,6 +375,66 @@ def data_participants():
     return jsonify(data)
 
 
+def handle_encounters(action, payload, username):
+        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
+        data = {}
+        uuid = ""
+        query = ""
+
+        print("HERE")
+        for key in payload.keys():
+            tokens = re.findall(r'\[(.*?)\]', key)
+            if len(tokens) == 2:
+                [uuid, field_key] = tokens
+                data[field_key] = payload[key]
+
+        print("FIN")
+        print(f'UUID: {uuid}')  
+
+         # Handle Editing an existing record
+        if action.lower() == 'edit':
+            # data_keys = data.keys()
+
+            data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
+            data_vals = list(data.values())
+
+            query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
+            db.execute_query(query, data_vals)
+
+            new_data = db.zip_encounters(uuid=uuid)
+            jnew_data = jsonify(new_data)
+            db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=current_user.user_stamp(), resultant_value=jnew_data)
+            # send_sio_msg('edit_encounter', jnew_data)
+            send_sio_msg('edit_encounter', new_data)
+            return new_data
+
+        # Handle Creating a new record
+        if action.lower() == 'create':
+            uuid = str(uuid4())
+            data['uuid'] = uuid
+            data_keys = data.keys()
+            query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys)})"
+            id = db.execute_query(query, data)
+
+            new_data = db.zip_encounters(uuid=uuid)
+            jnew_data = jsonify(new_data)
+            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'), uuid=uuid)
+            send_sio_msg('new_encounter', jnew_data)
+            return new_data
+
+        # Handle Remove
+        if action.lower() == 'remove':
+            query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
+            db.execute_query(query)
+            
+            new_data = db.zip_encounters(uuid=uuid)
+            jnew_data = jsonify(new_data)
+            db.log_encounter_audit(action=action.lower(), user_id=current_user.user_stamp(), resultant_value=jnew_data, uuid=uuid)
+            send_sio_msg('remove_encounter', jnew_data)
+            return new_data
+
+
+
 @internal_api_bp.route('/encounters', methods=['GET', 'POST'])
 @internal_api_bp.route('/encounters/<aid_station>', methods=['GET', 'POST'])
 @login_required
@@ -388,66 +450,14 @@ def data_encounters(aid_station=None):
             return jsonify({ 'error': 'Ahhh I dont know what to do, please provide an action'})
 
         action = request.form['action']
-
-        # Save for syncing
-        # sync_data = jsonify()
-        from pprint import pprint
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=json.dumps(request.form), sync_status=0, created_at=created_at)
+        data = handle_encounters(action=action, payload=request.form, username=current_user.user_stamp())
+        return jsonify( data )
 
-        pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
-        data = {}
-        id = 0
-        query = ""
 
-        for key in request.form.keys():
-            matches = re.search(pattern, key)
-            if matches:
-                id = int(matches.group(1))
-                field_key = matches.group(2)
-                data[field_key] = request.form[key]
 
-        # Handle Editing an existing record
-        if action.lower() == 'edit':
-            # data_keys = data.keys()
-
-            data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
-            data_vals = values = list(data.values()) + [id]
-
-            query = f"UPDATE encounters SET {data_cols} WHERE id = ?"
-            db.execute_query(query, data_vals)
-            # query = f"UPDATE encounters SET {' ,'.join(f'{n} = :{n}' for n in data_keys)} WHERE id={id}"
-            # execute_query(query, data)
-
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
-            send_sio_msg('edit_encounter', jnew_data)
-            return jnew_data
-
-        # Handle Creating a new record
-        if action.lower() == 'create':
-            data_keys = data.keys()
-            query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys) })"
-            id = db.execute_query(query, data)
-
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data.get_data().decode('UTF-8'))
-            send_sio_msg('new_encounter', jnew_data)
-            return jnew_data
-
-        # Handle Remove
-        if action.lower() == 'remove':
-            query = f"UPDATE encounters SET delete_flag=1 WHERE id={id}"
-            db.execute_query(query)
-            
-            new_data = db.zip_encounters(id=id)
-            jnew_data = jsonify(new_data)
-            db.log_encounter_audit(action=action.lower(), record_id=id, user_id=current_user.user_stamp(), resultant_value=jnew_data)
-            send_sio_msg('remove_encounter', jnew_data)
-            return jnew_data
-
+       
     # Handle Get Request
     if request.method == "GET":
         with db.db_connect() as conn:
@@ -480,31 +490,6 @@ def send_sio_msg(msg_type, msg, room=None):
 # *====================================================================*
 #         SocketIO Chat
 # *====================================================================*
-# @socketio.on('joined', namespace='/chat')
-# def joined(message):
-#     """Sent by clients when they enter a room.
-#     A status message is broadcast to all people in the room."""
-#     room = 'chat'
-#     join_room(room)
-#     emit('status', {'msg': current_user.name + ' has entered the room.'}, room=room)
-
-
-# @socketio.on('text', namespace='/chat')
-# def text(message):
-#     """Sent by a client when the user entered a new message.
-#     The message is sent to all people in the room."""
-#     room = 'chat'
-#     emit('message', {'msg': current_user.name + ':' + message['msg']}, room=room)
-
-
-# @socketio.on('left', namespace='/chat')
-# def left(message):
-#     """Sent by clients when they leave a room.
-#     A status message is broadcast to all people in the room."""
-#     room = 'chat'
-#     leave_room(room)
-#     emit('status', {'msg': current_user.name + ' has left the room.'}, room=room)
-
 @socketio.on('join', namespace='/chat')
 def handle_join(data):
     room = data['room']
@@ -549,6 +534,18 @@ def handle_send_message_public(data):
     }
 
     emit('receive_message', message, room=room)
+
+# *====================================================================*
+#         SocketIO Server Sync
+# *====================================================================*
+@socketio.on('join', namespace='/sync')
+def handle_sync_join(data):
+    key = data['key']
+    if key == Config.UPSTREAM_KEY:
+        join_room("encounters")
+
+        previous_encounters = db.get_sync_message()
+        emit('sync_encounters', previous_encounters, room=request.sid)
 
 if __name__ == '__main__':
     # create_database()
