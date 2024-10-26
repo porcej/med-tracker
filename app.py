@@ -429,39 +429,27 @@ def transact_create(user, data, uuid=None):
     data['uuid'] = uuid
     data_keys = data.keys()
     query = f"INSERT INTO encounters ( {', '.join(data_keys) }) VALUES (:{', :'.join(data_keys)})"
-    id = db.execute_query(query, data)
-
+    db.execute_query(query, data)
     new_data = db.zip_encounters(uuid=uuid)
-    jnew_data = json.dumps(new_data)
-    # db.log_encounter_audit(action='create' user_id=user, resultant_value=jnew_data, uuid=uuid)
-    send_sio_msg('new_encounter', jnew_data)
+    send_sio_msg('new_encounter', new_data)
     return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
 def transact_edit(user, data, uuid):
     data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
-    data_vals = list(parts['data'].values())
+    data_vals = list(data.values())
 
     query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
     print(query)
     db.execute_query(query, data_vals)
     new_data = db.zip_encounters(uuid=uuid)
-    print(json.dumps(new_data, indent=8))
-
-    jnew_data = json.dumps(new_data)
-    db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=username, resultant_value=jnew_data)
-    log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
     send_sio_msg('edit_encounter', new_data)
     return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
 def transact_delete(user, uuid):
     query = f"UPDATE encounters SET delete_flag=1 WHERE uuid='{uuid}'"
     db.execute_query(query)
-    
     new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
-    jnew_data = json.dumps(new_data)
-    db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
-    log_sync_id = db.log_sync(username=username, data=payloadStr , sync_status=0, created_at=created_at, encounter_uuid=uuid)
-    send_sio_msg('remove_encounter', jnew_data)
+    send_sio_msg('remove_encounter', new_data)
     return {'encounter_uuid': uuid, 'data': new_data, 'user': user}
 
 
@@ -478,14 +466,19 @@ def transaction(payload, user="API", encounter_uuid=None, created_at=None):
 
     # Handle Creating a new record
     if parts['action'] == 'create':
-        return transact_create(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+        ret_val = transact_create(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
 
      # Handle Editing an existing record
-    if parts['action'] == 'edit':
-        return transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+    elif parts['action'] == 'edit':
+        ret_val = transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
 
-    if parts['action'] == 'remove':
-       return transact_edit(user=user, data=parts['data'], uuid=parts['encounter_uuid'])
+    # Handle removing 
+    elif parts['action'] == 'remove':
+       ret_val = transact_delete(user=user, uuid=parts['encounter_uuid'])
+
+    jnew_data = json.dumps(ret_val['data'])
+    db.log_encounter_audit(action=parts['action'], uuid=ret_val['encounter_uuid'], user_id=user, resultant_value=jnew_data)
+    return ret_val
 
 
 @internal_api_bp.route('/encounters', methods=['GET', 'POST'])
@@ -610,22 +603,20 @@ def notify_sync_new_record(room='encounters'):
 def add_sync_transaction(message):
     msg_type = "encounter_sync_confirmation"
     data = message['data']
-    username = message['username']
+    user = message['user']
     created_at = message['created_at']
-    encounter_uuid = message['encounter_uuid']
+    e_uuid = message['encounter_uuid']
     uuid = message['uuid']
 
-    log_sync_id = db.log_sync(username=username, data=data, sync_status=1, created_at=created_at, uuid=uuid, encounter_uuid=encounter_uuid)
-    print(f"Add tranasction message: {json.dumps(message, indent=4)}")
-    print(f"**************** {log_sync_id}--{uuid}")
-    if log_sync_id is not None:
-        transaction(payloadStr=data, username=username, encounter_uuid=encounter_uuid, created_at=created_at)
+    transaction_uuid = db.log_transaction(encounter_uuid=e_uuid, user=user, data=data, created_at=created_at, transaction_uuid=uuid, synced=2)
+    if transaction_uuid is not None:
+        transaction(payload=data, user=user, encounter_uuid=e_uuid, created_at=created_at)
     
     if sync_mode == 'client':
         if remote_sio.connected:
-            remote_sio.emit(msg_type, {'id': log_sync_id}, namespace="/sync")
+            remote_sio.emit(msg_type, {'id': transaction_uuid}, namespace="/sync")
     else:
-        emit(msg_type, {'id': log_sync_id}, room="encounters", namespace="/sync")
+        emit(msg_type, {'id': transaction_uuid}, room="encounters", namespace="/sync")
 
 
 # *====================================================================*
