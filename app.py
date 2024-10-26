@@ -23,7 +23,7 @@ import pandas as pd
 import re
 import sqlite3
 import sys
-from uuid import uuid4
+from uuid import uuid4, UUID
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort, Blueprint, g
 from flask_login import current_user, LoginManager, login_user, logout_user, login_required, UserMixin
 from urllib.parse import urlsplit
@@ -389,15 +389,20 @@ def data_participants():
     return jsonify(data)
 
 
-def handle_encounters(payload, username):
+def transaction(payloadStr, username="API", encounter_uuid=None, created_at=None):
         pattern = r'\[(\d+)\]\[([a-zA-Z_]+)\]'
         data = {}
         uuid = ""
         query = ""
         known_actions = ['create', 'edit', 'remove']
+        if created_at is None:
+            created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        if isinstance(payload, str):
-            payload = json.loads(payload)
+        if isinstance(payloadStr, str):
+            payload = json.loads(payloadStr)
+        else:
+            payload = payloadStr
+            payloadStr = json.dumps(payload)
 
         # Validate the post request
         if 'action' not in payload:
@@ -417,20 +422,27 @@ def handle_encounters(payload, username):
                 [uuid, field_key] = tokens
                 data[field_key] = payload[key]
 
+        try:
+            uuid_obj = UUID(uuid, version=4)
+        except ValueError:
+            uuid = encounter_uuid
+ 
          # Handle Editing an existing record
         if action == 'edit':
             # data_keys = data.keys()
+
+            print(f" - Editing encounter with UUID: {uuid}", file=sys.stderr)
 
             data_cols = ', '.join([f"{key} = ?" for key in data.keys()])
             data_vals = list(data.values())
 
             query = f"UPDATE encounters SET {data_cols} WHERE uuid = '{uuid}'"
             db.execute_query(query, data_vals)
-
             new_data = db.zip_encounters(uuid=uuid)
+
             jnew_data = json.dumps(new_data)
             db.log_encounter_audit(action=action.lower(), uuid=uuid, user_id=username, resultant_value=jnew_data)
-            # send_sio_msg('edit_encounter', jnew_data)
+            log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
             send_sio_msg('edit_encounter', new_data)
             return new_data
 
@@ -445,6 +457,7 @@ def handle_encounters(payload, username):
             new_data = db.zip_encounters(uuid=uuid)
             jnew_data = json.dumps(new_data)
             db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
+            log_sync_id = db.log_sync(username=username, data=payloadStr, sync_status=0, created_at=created_at, encounter_uuid=uuid)
             send_sio_msg('new_encounter', jnew_data)
             return new_data
 
@@ -456,6 +469,7 @@ def handle_encounters(payload, username):
             new_data = db.zip_encounters(uuid=uuid, include_deleted=True)
             jnew_data = json.dumps(new_data)
             db.log_encounter_audit(action=action.lower(), user_id=username, resultant_value=jnew_data, uuid=uuid)
+            log_sync_id = db.log_sync(username=username, data=payloadStr , sync_status=0, created_at=created_at, encounter_uuid=uuid)
             send_sio_msg('remove_encounter', jnew_data)
             return new_data
 
@@ -470,11 +484,10 @@ def data_encounters(aid_station=None):
         aid_station = aid_station.replace("--", "/")
 
     if request.method == 'POST':
-        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         payload = json.dumps(request.form)
 
-        log_sync_id = db.log_sync(username=current_user.user_stamp(), aid_station=aid_station, data=payload, sync_status=0, created_at=created_at)
-        data = handle_encounters(payload=request.form, username=current_user.user_stamp())
+        
+        data = transaction(payloadStr=request.form, username=current_user.user_stamp())
         notify_sync_new_record()
         return jsonify( data )
        
@@ -576,20 +589,22 @@ def notify_sync_new_record(room='encounters'):
 
 # Add a transaction from a remote host
 def add_sync_transaction(encounter):
+    msg_type = "encounter_sync_confirmation"
     data = encounter['data']
     username = encounter['username']
     created_at = encounter['created_at']
+    encounter_uuid = encounter['encounter_uuid']
     uuid = encounter['uuid']
 
     log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at, uuid=uuid)
     if log_sync_id is not None:
-        handle_encounters(payload=data, username=username)
+        transaction(payloadStr=data, username=username, encounter_uuid=encounter_uuid, created_at=created_at)
     
     if sync_mode == 'client':
         if remote_sio.connected:
-            remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
+            remote_sio.emit(msg_type, {'id': log_sync_id}, namespace="/sync")
     else:
-        emit("encounter_sync_confirmation", {'id': log_sync_id}, room="encounters", namespace="/sync")
+        emit(msg_type, {'id': log_sync_id}, room="encounters", namespace="/sync")
 
 
 # *====================================================================*

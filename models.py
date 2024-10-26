@@ -188,8 +188,8 @@ class Db:
             cursor.execute('''CREATE TABLE IF NOT EXISTS sync_log (
                               id INTEGER PRIMARY KEY AUTOINCREMENT,
                               uuid TEXT UNIQUE NOT NULL,
+                              encounter_uuid TEXT NOT NULL,
                               username TEXT NOT NULL DEFAULT 'API',
-                              aid_station TEXT,
                               data TEXT,
                               synced INTEGER DEFAULT 0,
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -199,15 +199,15 @@ class Db:
             conn.commit()
 
     # Function to log server sync
-    def log_sync(self, username, aid_station, data, sync_status, created_at, uuid=None):
+    def log_sync(self, username, data, sync_status, created_at, encounter_uuid, uuid=None):
         table_name = 'sync_log'
         if uuid is None:
             uuid = str(uuid4());
-        query = f"INSERT INTO {table_name} (uuid, username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+        query = f"INSERT INTO {table_name} (uuid, encounter_uuid, username, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute(query, (uuid, username, aid_station, data, sync_status, created_at))
+                cursor.execute(query, (uuid, encounter_uuid, username, data, sync_status, created_at))
                 conn.commit()
                 return uuid
         except sqlite3.Error as e:
