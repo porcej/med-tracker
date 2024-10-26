@@ -604,7 +604,7 @@ def handle_sync_join(data):
         notify_sync_new_record(room=request.sid)
 
 # Handle a request to sync multiple encounters
-@socketio.on('sync_encounter', namespace='/sync')
+@socketio.on('sync_encounters', namespace='/sync')
 def handle_sync_encounters(data):
     if Config.SYNC_ENABLED:
         for encounter in data:
@@ -613,6 +613,7 @@ def handle_sync_encounters(data):
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @socketio.on('encounter_sync_confirmation', namespace='/sync')
 def handle_sync_confirmation(data):
+    print(json.dumps(data, indent=4))
     db.update_sync_status(log_id=data['id'], sync_status=2)
 # *====================================================================*
 #         SocketIO Server Sync Client
@@ -652,8 +653,8 @@ def remote_handle_sync_encounters(data):
 
 # Handle Encounter Sync Confirmation (set sync_status 2)
 @remote_sio.on('encounter_sync_confirmation', namespace='/sync')
-def remote_handle_sync_confirmation(id):
-    db.update_sync_status(log_id=id, sync_status=2)
+def remote_handle_sync_confirmation(data):
+    db.update_sync_status(log_id=data['id'], sync_status=2)
 
 if sync_mode == 'client':
     # Connect initially to the remote server in a separate thread
