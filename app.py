@@ -596,7 +596,7 @@ def add_sync_transaction(encounter):
     encounter_uuid = encounter['encounter_uuid']
     uuid = encounter['uuid']
 
-    log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at, uuid=uuid)
+    log_sync_id = db.log_sync(username=username, data=data, sync_status=1, created_at=created_at, uuid=uuid, encounter_uuid=encounter_uuid)
     if log_sync_id is not None:
         transaction(payloadStr=data, username=username, encounter_uuid=encounter_uuid, created_at=created_at)
     
