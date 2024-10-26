@@ -576,7 +576,7 @@ def connect_to_remote_server():
             print(f"SYNC Client connection failed: {e}. Retrying in 60 seconds...", file=sys.stderr)
             time.sleep(60)  # Wait before retrying
 
-@remote_sio.event
+@remote_sio.event(namespace="/sync")
 def connect():
     msg = {
         'key': Config.UPSTREAM_KEY,
@@ -584,7 +584,7 @@ def connect():
     }
     sio.emit('join', msg, namespace="/sync")
 
-@remote_sio.event
+@remote_sio.event(namespace="/sync")
 def disconnect():
     print("Disconnected from the remote Socket.IO server. Attempting to reconnect...")
     # Start reconnection attempts in a separate thread
