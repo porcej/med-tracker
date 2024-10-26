@@ -199,10 +199,11 @@ class Db:
             conn.commit()
 
     # Function to log server sync
-    def log_sync(self, username, aid_station, data, sync_status, created_at):
+    def log_sync(self, username, aid_station, data, sync_status, created_at, uuid=None):
         table_name = 'sync_log'
-        uuid = str(uuid4());
-        query = f"INSERT INTO {table_name} (uuid, username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?)"
+        if uuid is None:
+            uuid = str(uuid4());
+        query = f"INSERT INTO {table_name} (uuid, username, aid_station, data, synced, created_at) VALUES (?, ?, ?, ?, ?, ?)"
         try:
             with self.db_connect() as conn:
                 cursor = conn.cursor()
