@@ -215,7 +215,7 @@ class Db:
             return None
 
     # Check if we have this update
-    def check_if_synced(uuid):
+    def check_if_synced(self, uuid):
         table_name = 'sync_log'
         query = f"SELECT uuid FROM {table_name} WHERE uuid ='{uuid}'"
         try:

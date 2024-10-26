@@ -558,10 +558,11 @@ def add_sync_transaction(encounter):
     data = encounter['data']
     username = encounter['username']
     created_at = encounter['created_at']
+    uuid = encounter['uuid']
 
     handle_encounters(payload=data, username=username)
-    log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at)
-    print(f'LOG SYNC ID: {log_sync_id}')
+    log_sync_id = db.log_sync(username=username, aid_station=None, data=data, sync_status=1, created_at=created_at, uuid=uuid)
+    
     if sync_mode == 'client':
         remote_sio.emit("encounter_sync_confirmation", {'id': log_sync_id}, namespace="/sync")
     else:
