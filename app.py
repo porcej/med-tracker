@@ -549,11 +549,18 @@ def handle_send_message_public(data):
 # *====================================================================*
 #         SocketIO Server Sync
 # *====================================================================*
+@socketio.on('connection')
+def handle_sync_connection(data):
+
+
 @socketio.on('join', namespace='/sync')
 def handle_sync_join(data):
     key = data['key']
+    room = data['room']
+    print("SERVER CONNECTED SERVER CONNECTED SERVER CONNECTED")
     if key == Config.UPSTREAM_KEY:
-        join_room("encounters")
+        join_room(room)
+        print(request.sid)
 
         previous_encounters = db.get_sync_message()
         emit('sync_encounters', previous_encounters, room=request.sid)
@@ -570,8 +577,16 @@ def connect_to_remote_server():
             remote_sio.connect(Config.UPSTREAM_ENDPOINT, namespaces=["/sync"])
             print("Successfully connected to the remote Socket.IO server.", file=sys.stderr)
         except socketioClient.exceptions.ConnectionError as e:
-            print(f"SYNC Client connection failed: {e}. Retrying in 30 seconds...", file=sys.stderr)
-            time.sleep(5)  # Wait before retrying
+            print(f"SYNC Client connection failed: {e}. Retrying in 60 seconds...", file=sys.stderr)
+            time.sleep(60)  # Wait before retrying
+
+@remote_sio.event
+def connect():
+    msg = {
+        'key': Config.UPSTREAM_KEY,
+        'room': encounters
+    }
+    sio.emit('join', msg)
 
 @remote_sio.event
 def disconnect():
